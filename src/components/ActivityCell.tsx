@@ -51,9 +51,21 @@ export const ActivityCell: React.FC<ActivityCellProps> = ({
   onMouseLeave,
   onCustomTextChange
 }) => {
+  // All hooks must be called before any early returns
   const [isEditingCustomText, setIsEditingCustomText] = useState(false);
   const [editText, setEditText] = useState(customText || '');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditingCustomText && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditingCustomText]);
+
+  useEffect(() => {
+    setEditText(customText || '');
+  }, [customText]);
 
   // Don't render anything if this is a merged placeholder
   if (isMergedPlaceholder) {
@@ -66,17 +78,6 @@ export const ActivityCell: React.FC<ActivityCellProps> = ({
   const borderColor = visitType ? visitTypeConfig[visitType].borderColor : '';
 
   const isMerged = colspan > 1 || rowspan > 1;
-
-  useEffect(() => {
-    if (isEditingCustomText && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditingCustomText]);
-
-  useEffect(() => {
-    setEditText(customText || '');
-  }, [customText]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
