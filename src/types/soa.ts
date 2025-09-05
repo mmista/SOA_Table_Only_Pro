@@ -52,6 +52,9 @@ export interface ActivityCell {
   footnote?: string;
   customText?: string;
   comment?: string;
+  colspan?: number;
+  rowspan?: number;
+  isMergedPlaceholder?: boolean;
 }
 
 export type VisitType = 'in-person' | 'phone-call' | 'drug-shipment' | 'remote-assessment';

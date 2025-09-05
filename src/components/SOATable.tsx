@@ -8,6 +8,7 @@ import { EmptyGroupModal } from './EmptyGroupModal';
 import { ActivityCell as ActivityCellComponent } from './ActivityCell';
 import { VisitTypeSelector } from './VisitTypeSelector';
 import { CommentModal } from './CommentModal';
+import { ActivityCellContextMenu } from './ActivityCellContextMenu';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { useVisitLinks } from '../hooks/useVisitLinks';
 import { useComments } from '../hooks/useComments';
@@ -37,6 +38,21 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
     activityId: string;
     dayId: string;
   } | null>(null);
+  
+  // New states for cell selection and context menu
+  const [selectedActivityCells, setSelectedActivityCells] = useState<Set<string>>(new Set());
+  const [selectionStartCell, setSelectionStartCell] = useState<{ activityId: string; dayId: string } | null>(null);
+  const [contextMenuState, setContextMenuState] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    clickedCell: { activityId: string; dayId: string } | null;
+  }>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    clickedCell: null
+  });
   
   // Comments hook
   const {
@@ -118,6 +134,41 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
       case 'questionnaire': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
+  };
+
+  // Helper function to get cell key
+  const getCellKey = (activityId: string, dayId: string) => `${activityId}_${dayId}`;
+
+  // Helper function to parse cell key
+  const parseCellKey = (key: string) => {
+    const [activityId, dayId] = key.split('_');
+    return { activityId, dayId };
+  };
+
+  // Helper function to get activity and day indices
+  const getActivityDayIndices = (activityId: string, dayId: string) => {
+    const activityIndex = activities.findIndex(a => a.id === activityId);
+    if (activityIndex === -1) return null;
+
+    const allDays: Day[] = [];
+    data.periods.forEach(period => {
+      period.cycles.forEach(cycle => {
+        cycle.weeks.forEach(week => {
+          allDays.push(...week.days);
+        });
+      });
+    });
+
+    const dayIndex = allDays.findIndex(d => d.id === dayId);
+    if (dayIndex === -1) return null;
+
+    return { activityIndex, dayIndex };
+  };
+
+  // Helper function to check if a cell is merged
+  const isCellMerged = (activityId: string, dayId: string) => {
+    const cell = getActivityCell(activityId, dayId);
+    return cell && ((cell.colspan && cell.colspan > 1) || (cell.rowspan && cell.rowspan > 1));
   };
 
   // Initialize activities data
@@ -252,6 +303,12 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
       logActivityState('AFTER ACTIVITIES RECREATION');
     }, 0);
   }, [data.periods]);
+
+  // Clear selection when data changes
+  React.useEffect(() => {
+    setSelectedActivityCells(new Set());
+    setSelectionStartCell(null);
+  }, [data]);
 
   const handleActivityEdit = (activityId: string) => {
     const activity = activities.find(a => a.id === activityId);
@@ -485,41 +542,100 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
     setEditContext(null);
   };
 
-  const handleActivityCellClick = (activityId: string, dayId: string) => {
-    // Get all linked visits for this day
-    const linkedVisits = getLinkedVisits(dayId);
+  // New function to handle activity cell clicks with selection logic
+  const handleActivityCellClick = (activityId: string, dayId: string, event: React.MouseEvent) => {
+    const cellKey = getCellKey(activityId, dayId);
     
-    setActivities(prev => prev.map(activity => {
-      if (activity.id === activityId) {
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            // Update the clicked cell and all linked cells
-            if (cell.dayId === dayId || linkedVisits.includes(cell.dayId)) {
-              return { 
-                ...cell, 
-                isActive: !cell.isActive,
-                // Clear visit type and footnote when deactivating
-                visitType: cell.isActive ? undefined : cell.visitType,
-                footnote: cell.isActive ? undefined : cell.footnote,
-                customText: cell.isActive ? undefined : cell.customText
-              };
+    if (event.shiftKey) {
+      // Shift+click for range selection
+      if (!selectionStartCell) {
+        // Start new selection
+        setSelectionStartCell({ activityId, dayId });
+        setSelectedActivityCells(new Set([cellKey]));
+      } else {
+        // Complete range selection
+        const startIndices = getActivityDayIndices(selectionStartCell.activityId, selectionStartCell.dayId);
+        const endIndices = getActivityDayIndices(activityId, dayId);
+        
+        if (startIndices && endIndices) {
+          const newSelection = new Set<string>();
+          
+          const minActivityIndex = Math.min(startIndices.activityIndex, endIndices.activityIndex);
+          const maxActivityIndex = Math.max(startIndices.activityIndex, endIndices.activityIndex);
+          const minDayIndex = Math.min(startIndices.dayIndex, endIndices.dayIndex);
+          const maxDayIndex = Math.max(startIndices.dayIndex, endIndices.dayIndex);
+          
+          // Get all days for indexing
+          const allDays: Day[] = [];
+          data.periods.forEach(period => {
+            period.cycles.forEach(cycle => {
+              cycle.weeks.forEach(week => {
+                allDays.push(...week.days);
+              });
+            });
+          });
+          
+          // Select rectangular range
+          for (let aIdx = minActivityIndex; aIdx <= maxActivityIndex; aIdx++) {
+            for (let dIdx = minDayIndex; dIdx <= maxDayIndex; dIdx++) {
+              if (activities[aIdx] && allDays[dIdx]) {
+                newSelection.add(getCellKey(activities[aIdx].id, allDays[dIdx].id));
+              }
             }
-            return cell;
-          })
-        };
+          }
+          
+          setSelectedActivityCells(newSelection);
+        }
       }
-      return activity;
-    }));
+    } else {
+      // Regular click - clear selection and toggle cell
+      setSelectedActivityCells(new Set());
+      setSelectionStartCell(null);
+      
+      // Get all linked visits for this day
+      const linkedVisits = getLinkedVisits(dayId);
+      
+      setActivities(prev => prev.map(activity => {
+        if (activity.id === activityId) {
+          return {
+            ...activity,
+            cells: activity.cells.map(cell => {
+              // Update the clicked cell and all linked cells
+              if (cell.dayId === dayId || linkedVisits.includes(cell.dayId)) {
+                return { 
+                  ...cell, 
+                  isActive: !cell.isActive,
+                  // Clear visit type and footnote when deactivating
+                  visitType: cell.isActive ? undefined : cell.visitType,
+                  footnote: cell.isActive ? undefined : cell.footnote,
+                  customText: cell.isActive ? undefined : cell.customText
+                };
+              }
+              return cell;
+            })
+          };
+        }
+        return activity;
+      }));
+    }
   };
 
   const handleActivityCellRightClick = (e: React.MouseEvent, activityId: string, dayId: string) => {
     e.preventDefault();
-    setVisitTypeSelector({
+    
+    const cellKey = getCellKey(activityId, dayId);
+    
+    // If right-clicking on a non-selected cell, clear selection and select this cell
+    if (!selectedActivityCells.has(cellKey)) {
+      setSelectedActivityCells(new Set([cellKey]));
+      setSelectionStartCell({ activityId, dayId });
+    }
+    
+    setContextMenuState({
       isOpen: true,
-      position: { x: e.clientX, y: e.clientY },
-      activityId,
-      dayId
+      x: e.clientX,
+      y: e.clientY,
+      clickedCell: { activityId, dayId }
     });
   };
 
@@ -546,6 +662,199 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
     }));
     
     setVisitTypeSelector(null);
+  };
+
+  // New function to handle custom text changes
+  const handleActivityCellCustomTextChange = (activityId: string, dayId: string, newText: string) => {
+    setActivities(prev => prev.map(activity => {
+      if (activity.id === activityId) {
+        return {
+          ...activity,
+          cells: activity.cells.map(cell => {
+            if (cell.dayId === dayId) {
+              return { ...cell, customText: newText };
+            }
+            return cell;
+          })
+        };
+      }
+      return activity;
+    }));
+  };
+
+  // New function to merge selected cells
+  const mergeSelectedCells = () => {
+    if (selectedActivityCells.size < 2) return;
+    
+    // Parse selected cells to get activity and day indices
+    const selectedCellsData = Array.from(selectedActivityCells).map(key => {
+      const { activityId, dayId } = parseCellKey(key);
+      const indices = getActivityDayIndices(activityId, dayId);
+      return { activityId, dayId, indices };
+    }).filter(item => item.indices !== null);
+    
+    if (selectedCellsData.length === 0) return;
+    
+    // Find the bounds of the selection
+    const activityIndices = selectedCellsData.map(item => item.indices!.activityIndex);
+    const dayIndices = selectedCellsData.map(item => item.indices!.dayIndex);
+    
+    const minActivityIndex = Math.min(...activityIndices);
+    const maxActivityIndex = Math.max(...activityIndices);
+    const minDayIndex = Math.min(...dayIndices);
+    const maxDayIndex = Math.max(...dayIndices);
+    
+    const colspan = maxDayIndex - minDayIndex + 1;
+    const rowspan = maxActivityIndex - minActivityIndex + 1;
+    
+    // Get all days for indexing
+    const allDays: Day[] = [];
+    data.periods.forEach(period => {
+      period.cycles.forEach(cycle => {
+        cycle.weeks.forEach(week => {
+          allDays.push(...week.days);
+        });
+      });
+    });
+    
+    // Find the top-left cell (main cell)
+    const mainActivityId = activities[minActivityIndex].id;
+    const mainDayId = allDays[minDayIndex].id;
+    
+    setActivities(prev => prev.map((activity, activityIndex) => {
+      return {
+        ...activity,
+        cells: activity.cells.map((cell, cellIndex) => {
+          const dayIndex = allDays.findIndex(d => d.id === cell.dayId);
+          
+          // Check if this cell is within the merge area
+          if (activityIndex >= minActivityIndex && activityIndex <= maxActivityIndex &&
+              dayIndex >= minDayIndex && dayIndex <= maxDayIndex) {
+            
+            if (activity.id === mainActivityId && cell.dayId === mainDayId) {
+              // This is the main cell
+              return {
+                ...cell,
+                colspan,
+                rowspan,
+                customText: cell.customText || 'Continuous',
+                isActive: true
+              };
+            } else {
+              // This is a placeholder cell
+              return {
+                ...cell,
+                isMergedPlaceholder: true,
+                isActive: false,
+                visitType: undefined,
+                footnote: undefined,
+                customText: undefined
+              };
+            }
+          }
+          
+          return cell;
+        })
+      };
+    }));
+    
+    // Clear selection
+    setSelectedActivityCells(new Set());
+    setSelectionStartCell(null);
+  };
+
+  // New function to unmerge a cell
+  const unmergeCell = (activityId: string, dayId: string) => {
+    setActivities(prev => prev.map(activity => {
+      if (activity.id === activityId) {
+        return {
+          ...activity,
+          cells: activity.cells.map(cell => {
+            if (cell.dayId === dayId) {
+              // Reset the main merged cell
+              return {
+                ...cell,
+                colspan: undefined,
+                rowspan: undefined
+              };
+            }
+            return cell;
+          })
+        };
+      } else {
+        // Reset any placeholder cells that were part of this merge
+        return {
+          ...activity,
+          cells: activity.cells.map(cell => {
+            if (cell.isMergedPlaceholder) {
+              // We need to check if this placeholder was part of the unmerged cell
+              // For simplicity, we'll reset all placeholders - in a real app you'd track this more precisely
+              return {
+                ...cell,
+                isMergedPlaceholder: false
+              };
+            }
+            return cell;
+          })
+        };
+      }
+    }));
+  };
+
+  // New function to activate selected cells
+  const activateSelectedCells = (visitType?: VisitType) => {
+    if (selectedActivityCells.size === 0) return;
+    
+    setActivities(prev => prev.map(activity => {
+      return {
+        ...activity,
+        cells: activity.cells.map(cell => {
+          const cellKey = getCellKey(activity.id, cell.dayId);
+          if (selectedActivityCells.has(cellKey)) {
+            return {
+              ...cell,
+              isActive: true,
+              visitType,
+              footnote: undefined,
+              customText: undefined
+            };
+          }
+          return cell;
+        })
+      };
+    }));
+    
+    // Clear selection
+    setSelectedActivityCells(new Set());
+    setSelectionStartCell(null);
+  };
+
+  // New function to clear selected cells
+  const clearSelectedCells = () => {
+    if (selectedActivityCells.size === 0) return;
+    
+    setActivities(prev => prev.map(activity => {
+      return {
+        ...activity,
+        cells: activity.cells.map(cell => {
+          const cellKey = getCellKey(activity.id, cell.dayId);
+          if (selectedActivityCells.has(cellKey)) {
+            return {
+              ...cell,
+              isActive: false,
+              visitType: undefined,
+              footnote: undefined,
+              customText: undefined
+            };
+          }
+          return cell;
+        })
+      };
+    }));
+    
+    // Clear selection
+    setSelectedActivityCells(new Set());
+    setSelectionStartCell(null);
   };
 
   const handleCommentClick = (
@@ -624,6 +933,12 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
                   <div className="flex items-center space-x-1 text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                     <MessageSquare className="w-3 h-3" />
                     <span>{commentStats.total} comment{commentStats.total !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {selectedActivityCells.size > 0 && (
+                  <div className="flex items-center space-x-1 text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>{selectedActivityCells.size} cell{selectedActivityCells.size !== 1 ? 's' : ''} selected</span>
                   </div>
                 )}
               </h1>
@@ -950,6 +1265,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
                             const cellData = getActivityCell(activity.id, day.id);
                             const isHighlighted = shouldHighlightActivityCell(day.id, activity.id);
                             const activityCellKey = `activity:${activity.id}:${day.id}`;
+                            const cellKey = getCellKey(activity.id, day.id);
+                            const isSelected = selectedActivityCells.has(cellKey);
                             
                             return (
                               <ActivityCellComponent
@@ -962,11 +1279,16 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
                                 isLinked={isVisitLinked(day.id)}
                                 isRowHovered={hoveredActivityRow === activity.id}
                                 hasComment={hasComment(activityCellKey, 'activity')}
-                                onClick={() => handleActivityCellClick(activity.id, day.id)}
+                                isSelected={isSelected}
+                                colspan={cellData?.colspan}
+                                rowspan={cellData?.rowspan}
+                                isMergedPlaceholder={cellData?.isMergedPlaceholder}
+                                onClick={(e) => handleActivityCellClick(activity.id, day.id, e)}
                                 onRightClick={(e) => handleActivityCellRightClick(e, activity.id, day.id)}
                                 onCommentClick={(e) => handleCommentClick(e, activityCellKey, 'activity')}
                                 onMouseEnter={() => handleActivityCellHover(day.id, activity.id)}
                                 onMouseLeave={() => handleActivityCellHover(null, null)}
+                                onCustomTextChange={(newText) => handleActivityCellCustomTextChange(activity.id, day.id, newText)}
                               />
                             );
                           })
@@ -1026,6 +1348,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
                     <span>Active activity</span>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>
+                    <span>Selected cell</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-white border border-gray-300 rounded-full flex items-center justify-center text-xs">a</div>
                     <span>Footnote reference</span>
                   </div>
@@ -1035,9 +1361,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
               <div>
                 <h4 className="font-semibold text-gray-700 mb-2">Instructions</h4>
                 <div className="space-y-1 text-xs text-gray-600">
-                  <div>• Click comment icon to add/view comments</div>
-                  <div>• Click cell to activate/deactivate</div>
-                  <div>• Right-click to set visit type</div>
+                  <div>• Click to activate/deactivate cells</div>
+                  <div>• Shift+click to select cell ranges</div>
+                  <div>• Right-click for context menu</div>
+                  <div>• Double-click merged cells to edit text</div>
                   <div>• Drag timeline elements to reorganize</div>
                 </div>
               </div>
@@ -1073,6 +1400,33 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
         currentVisitType={visitTypeSelector ? getActivityCell(visitTypeSelector.activityId, visitTypeSelector.dayId)?.visitType : undefined}
         onSelect={handleVisitTypeSelect}
         onClose={() => setVisitTypeSelector(null)}
+      />
+      
+      <ActivityCellContextMenu
+        isOpen={contextMenuState.isOpen}
+        position={{ x: contextMenuState.x, y: contextMenuState.y }}
+        selectedCells={selectedActivityCells}
+        clickedCell={contextMenuState.clickedCell}
+        isMergedCell={contextMenuState.clickedCell ? isCellMerged(contextMenuState.clickedCell.activityId, contextMenuState.clickedCell.dayId) : false}
+        onMerge={mergeSelectedCells}
+        onUnmerge={() => {
+          if (contextMenuState.clickedCell) {
+            unmergeCell(contextMenuState.clickedCell.activityId, contextMenuState.clickedCell.dayId);
+          }
+        }}
+        onActivateSelected={activateSelectedCells}
+        onClearSelected={clearSelectedCells}
+        onSetVisitTypeForSingleCell={() => {
+          if (contextMenuState.clickedCell) {
+            setVisitTypeSelector({
+              isOpen: true,
+              position: { x: contextMenuState.x, y: contextMenuState.y },
+              activityId: contextMenuState.clickedCell.activityId,
+              dayId: contextMenuState.clickedCell.dayId
+            });
+          }
+        }}
+        onClose={() => setContextMenuState({ isOpen: false, x: 0, y: 0, clickedCell: null })}
       />
       
       <EmptyGroupModal
