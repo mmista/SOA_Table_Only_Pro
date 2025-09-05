@@ -16,7 +16,7 @@ interface ActivityCellProps {
   colspan?: number;
   rowspan?: number;
   isMergedPlaceholder?: boolean;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   onRightClick: (e: React.MouseEvent) => void;
   onCommentClick?: (e: React.MouseEvent) => void;
   onMouseEnter?: () => void;
@@ -159,7 +159,7 @@ export const ActivityCell: React.FC<ActivityCellProps> = ({
       `}
       colSpan={colspan}
       rowSpan={rowspan}
-      onClick={onClick}
+      onClick={(e) => onClick(e)}
       onContextMenu={onRightClick}
       onDoubleClick={handleDoubleClick}
       onMouseEnter={onMouseEnter}
