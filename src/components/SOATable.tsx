@@ -294,6 +294,27 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
           return {
             ...activity,
             cells: newCells
+          };
+        });
+      });
+    }
+  }, [data.periods]);
+
+  const handleActivityEdit = (activityId: string) => {
+    const activity = activities.find(a => a.id === activityId);
+    if (activity) {
+      setEditingActivity(activityId);
+      setEditValues({ description: activity.description });
+    }
+  };
+
+  const confirmEdit = () => {
+    if (editingActivity && editValues.description) {
+      setActivities(prev => prev.map(activity => 
+        activity.id === editingActivity 
+          ? { ...activity, description: editValues.description! }
+          : activity
+      ));
       setEditingActivity(null);
     }
     setEditValues({});
