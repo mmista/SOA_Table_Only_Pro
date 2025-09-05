@@ -5,6 +5,7 @@ import { SOAData, Period, Cycle, Week, Day, EditContext, EditableItemType, Activ
 import { EditPanel } from './EditPanel';
 import { DraggableCell } from './DraggableCell';
 import { EmptyGroupModal } from './EmptyGroupModal';
+import { TimelineHeaders } from './TimelineHeaders';
 import { ActivityCell as ActivityCellComponent } from './ActivityCell';
 import { VisitTypeSelector } from './VisitTypeSelector';
 import { CommentModal } from './CommentModal';
@@ -293,38 +294,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
           return {
             ...activity,
             cells: newCells
-          };
-        });
-      });
-    }
-    
-    console.log('🎯 Activities recreated');
-    setTimeout(() => {
-      logActivityState('AFTER ACTIVITIES RECREATION');
-    }, 0);
-  }, [data.periods]);
-
-  // Clear selection when data changes
-  React.useEffect(() => {
-    setSelectedActivityCells(new Set());
-    setSelectionStartCell(null);
-  }, [data]);
-
-  const handleActivityEdit = (activityId: string) => {
-    const activity = activities.find(a => a.id === activityId);
-    if (activity) {
-      setEditingActivity(activityId);
-      setEditValues({ description: activity.description });
-    }
-  };
-
-  const confirmEdit = () => {
-    if (editingActivity && editValues.description) {
-      setActivities(prev => prev.map(activity => 
-        activity.id === editingActivity 
-          ? { ...activity, description: editValues.description! }
-          : activity
-      ));
       setEditingActivity(null);
     }
     setEditValues({});
