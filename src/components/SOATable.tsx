@@ -298,8 +298,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
         });
       });
     }
-    
-    logActivityState('AFTER ACTIVITIES RECREATION');
   }, [data]);
 
   const handleActivityEdit = (activityId: string) => {
