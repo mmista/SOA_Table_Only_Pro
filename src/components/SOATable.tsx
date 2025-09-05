@@ -536,12 +536,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
 
   // New function to handle activity cell clicks with selection logic
   const handleActivityCellClick = (activityId: string, dayId: string, event: React.MouseEvent) => {
-    // If we have selected cells and user clicks without Shift, just clear selection
-    if (selectedActivityCells.size > 0 && !event.shiftKey) {
-      setSelectedActivityCells(new Set());
-      return; // Don't activate the clicked cell
-    }
-    
     const cellKey = getCellKey(activityId, dayId);
     
     if (event.shiftKey) {
