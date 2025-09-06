@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SOATable } from './components/SOATable';
+import { SOALegend } from './components/SOALegend';
 import { SOAData } from './types/soa';
 
 const initialData: SOAData = {
@@ -165,6 +166,7 @@ function App() {
         data={soaData} 
         onDataChange={setSoaData}
       />
+      <SOALegend />
     </div>
   );
 }
