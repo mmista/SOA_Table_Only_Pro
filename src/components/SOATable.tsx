@@ -1330,23 +1330,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
                 </div>
               </div>
               
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Cell Indicators</h4>
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-                    <span>Active activity</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>
-                    <span>Selected cell</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-white border border-gray-300 rounded-full flex items-center justify-center text-xs">a</div>
-                    <span>Footnote reference</span>
-                  </div>
-                </div>
-              </div>
               
               <div>
                 <h4 className="font-semibold text-gray-700 mb-2">Instructions</h4>
