@@ -1304,45 +1304,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
               </tbody>
             </table>
           </div>
-          
-          {/* Legend */}
-          <div className="p-4 bg-gray-50 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Visit Types</h4>
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4 text-blue-500" strokeWidth={1.5} />
-                    <span>In-person visit</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Phone className="w-4 h-4 text-green-500" strokeWidth={1.5} />
-                    <span>Phone call</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Package className="w-4 h-4 text-purple-500" strokeWidth={1.5} />
-                    <span>Drug shipment</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Monitor className="w-4 h-4 text-orange-500" strokeWidth={1.5} />
-                    <span>Remote assessment</span>
-                  </div>
-                </div>
-              </div>
-              
-              
-              <div>
-                <h4 className="font-semibold text-gray-700 mb-2">Instructions</h4>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• Click to activate/deactivate cells</div>
-                  <div>• Shift+click to select cell ranges</div>
-                  <div>• Right-click for context menu</div>
-                  <div>• Double-click merged cells to edit text</div>
-                  <div>• Drag timeline elements to reorganize</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
