@@ -911,8 +911,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex bg-gray-50 w-full">
+      <div className="flex-1 p-6">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
             <div>
