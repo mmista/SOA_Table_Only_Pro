@@ -1308,6 +1308,24 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
       </div>
 
       {editContext && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setEditContext(null)}
+          />
+          {/* Edit Panel */}
+          <EditPanel
+            context={editContext}
+            onSave={handleEditSave}
+            onDelete={handleDelete}
+            onCancel={() => setEditContext(null)}
+          />
+        </>
+      )}
+      </div>
+      
+      <CommentModal
         <EditPanel
           context={editContext}
           onSave={handleEditSave}
