@@ -911,8 +911,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
 
   return (
     <>
-      <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex bg-gray-50 w-full">
+      <div className="flex-1 p-6">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
             <div>
@@ -1308,6 +1308,33 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
       </div>
 
       {editContext && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setEditContext(null)}
+          />
+          {/* Edit Panel */}
+          <EditPanel
+            context={editContext}
+            onSave={handleEditSave}
+            onDelete={handleDelete}
+            onCancel={() => setEditContext(null)}
+          />
+        </>
+      )}
+      </div>
+      
+      {/* Backdrop for EditPanel */}
+      {editContext && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setEditContext(null)}
+        />
+      )}
+      
+      {/* EditPanel */}
+      {editContext && (
         <EditPanel
           context={editContext}
           onSave={handleEditSave}
@@ -1315,9 +1342,9 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
           onCancel={() => setEditContext(null)}
         />
       )}
-      </div>
       
       <CommentModal
+          context={editContext}
         isOpen={commentModal.isOpen}
         position={commentModal.position}
         cellId={commentModal.cellId}
