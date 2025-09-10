@@ -49,7 +49,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const [visitTypeSelector, setVisitTypeSelector] = useState<{
     isOpen: boolean,
     position: { x: number, y: number },
-    activityId: string;
+    activityId: string,
     dayId: string;
   
   const [groupHeaderContextMenu, setGroupHeaderContextMenu] = useState<{
