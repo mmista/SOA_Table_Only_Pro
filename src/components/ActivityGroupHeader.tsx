@@ -94,6 +94,10 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
       <td 
         className="sticky left-0 bg-gray-50 px-4 py-3 z-[15] border-r border-gray-300"
         colSpan={1}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onUngroup(group.id);
+        }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
