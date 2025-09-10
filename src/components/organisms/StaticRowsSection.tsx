@@ -1,16 +1,17 @@
 import React from 'react';
-import { SOAData, TimeRelativeCell, TimeWindowCell, TimeOfDayCell, EditableItemType } from '../../types/soa';
+import { SOAData, TimeRelativeCell, TimeWindowCell as TimeWindowCellInterface, TimeOfDayCell, EditableItemType } from '../../types/soa';
 import { TimelineHeaderConfig, useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 import { StaticTableCell } from '../molecules/StaticTableCell';
 import { VisitLabelCell } from '../molecules/VisitLabelCell';
 import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
 import { HiddenHeadersContainer } from '../molecules/HiddenHeadersContainer';
+import { TimeWindowCell } from '../molecules/TimeWindowCell';
 
 interface StaticRowsSectionProps {
   data: SOAData;
   headerManagement: ReturnType<typeof useTimelineHeaderManagement>;
   timeRelativeCells: TimeRelativeCell[];
-  timeWindowCells: TimeWindowCell[];
+  timeWindowCells: TimeWindowCellInterface[];
   timeOfDayCells: TimeOfDayCell[];
   totalColumns: number;
   selectedTimeWindowCells: Set<string>;
