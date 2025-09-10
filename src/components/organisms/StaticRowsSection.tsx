@@ -2,6 +2,7 @@ import React from 'react';
 import { SOAData } from '../../types/soa';
 import { StaticTableCell } from '../molecules/StaticTableCell';
 import { VisitLabelCell } from '../molecules/VisitLabelCell';
+import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
 import { useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 
 interface StaticRowsSectionProps {
@@ -21,7 +22,14 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   shouldHighlightVisit,
   handleVisitHover
 }) => {
-  const { visibleHeaders } = useTimelineHeaderManagement();
+  const {
+    visibleHeaders,
+    editingHeaderId,
+    startEditingHeader,
+    saveHeaderLabel,
+    cancelEditingHeader,
+    hideHeader
+  } = useTimelineHeaderManagement();
 
   // Calculate visit number for a given day
   const calculateVisitNumber = (targetDayId: string): number => {
@@ -57,11 +65,18 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   return (
     <>
       {/* Time of Day Row */}
-      {isHeaderVisible('visit') && (
+      {isHeaderVisible('time-of-day') && (
         <tr>
-          <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-            TIME OF DAY
-          </td>
+          <EditableHeaderLabel
+            id="time-of-day"
+            label={visibleHeaders.find(h => h.type === 'time-of-day')?.label || 'TIME OF DAY'}
+            isEditing={editingHeaderId === 'time-of-day'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+          />
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
@@ -79,11 +94,18 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
       )}
 
       {/* Allowed Window Row */}
-      {isHeaderVisible('visit') && (
+      {isHeaderVisible('allowed-window') && (
         <tr>
-          <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-            ALLOWED WINDOW
-          </td>
+          <EditableHeaderLabel
+            id="allowed-window"
+            label={visibleHeaders.find(h => h.type === 'allowed-window')?.label || 'ALLOWED WINDOW'}
+            isEditing={editingHeaderId === 'allowed-window'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+          />
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
@@ -103,9 +125,16 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
       {/* Visit Label Row */}
       {isHeaderVisible('visit') && (
         <tr>
-          <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-            {visibleHeaders.find(h => h.type === 'visit')?.label || 'VISIT LABEL'}
-          </td>
+          <EditableHeaderLabel
+            id="visit"
+            label={visibleHeaders.find(h => h.type === 'visit')?.label || 'VISIT LABEL'}
+            isEditing={editingHeaderId === 'visit'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+          />
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
