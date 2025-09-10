@@ -10,7 +10,7 @@ interface ActivityGroupHeaderProps {
   onToggleCollapse: (groupId: string) => void;
   onRename: (groupId: string, newName: string) => void;
   onChangeColor: (groupId: string, newColor: string) => void;
-  onOpenColorPicker?: (groupId: string) => void;
+  onOpenColorPicker?: (groupId: string | null) => void;
   onUngroup: (groupId: string) => void;
   onRightClick: (e: React.MouseEvent, groupId: string) => void;
 }
@@ -57,14 +57,17 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
 
   useEffect(() => {
     if (forceShowColorPicker) {
-      setShowColorPicker(true);
+      setShowColorPicker(forceShowColorPicker);
     }
-  }, [forceShowColorPicker]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
-        setShowColorPicker(false);
+        if (onOpenColorPicker) {
+          onOpenColorPicker(null);
+        } else {
+          setShowColorPicker(false);
+        }
       }
     };
 
@@ -98,13 +101,19 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
 
   const handleColorChange = (newColor: string) => {
     onChangeColor(group.id, newColor);
-    setShowColorPicker(false);
+    if (onOpenColorPicker) {
+      onOpenColorPicker(null);
+    } else {
+      setShowColorPicker(false);
+    }
   };
 
   const handleOpenColorPicker = () => {
-    setShowColorPicker(!showColorPicker);
-    if (onOpenColorPicker && !showColorPicker) {
-      onOpenColorPicker(group.id);
+    const newShowState = !showColorPicker;
+    if (onOpenColorPicker) {
+      onOpenColorPicker(newShowState ? group.id : null);
+    } else {
+      setShowColorPicker(newShowState);
     }
   };
 

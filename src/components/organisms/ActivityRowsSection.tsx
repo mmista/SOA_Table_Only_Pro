@@ -101,16 +101,10 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
   const handleOpenGroupColorPicker = (groupId: string) => {
     setOpenColorPickerGroupId(groupId);
     handleCloseGroupHeaderContextMenu();
-    
-    // Reset the color picker state after a short delay to prevent it from staying open
-    setTimeout(() => {
-      setOpenColorPickerGroupId(null);
-    }, 100);
   };
 
-  const handleGroupColorPickerOpen = (groupId: string) => {
-    // This is called when the color picker is opened directly from the header
-    // We don't need to do anything special here, just acknowledge it
+  const handleGroupColorPickerToggle = (groupId: string | null) => {
+    setOpenColorPickerGroupId(groupId);
   };
 
   // Organize activities by groups
@@ -199,7 +193,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
             onToggleCollapse={onToggleGroupCollapse}
             onRename={onRenameGroup}
             onChangeColor={onChangeGroupColor}
-            onOpenColorPicker={handleGroupColorPickerOpen}
+            onOpenColorPicker={handleGroupColorPickerToggle}
             onUngroup={onUngroupGroup}
             onRightClick={handleGroupHeaderRightClick}
           />
