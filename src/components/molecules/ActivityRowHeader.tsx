@@ -1,6 +1,5 @@
 import React from 'react';
 import { Minus } from 'lucide-react';
-import { CategoryDot } from '../atoms/CategoryDot';
 import { EditableText } from '../atoms/EditableText';
 import { ActivityData } from '../../types/soa';
 
@@ -8,27 +7,55 @@ interface ActivityRowHeaderProps {
   activity: ActivityData;
   isEditing: boolean;
   isHovered: boolean;
+  isSelected: boolean;
+  groupColor?: string;
   onEdit: () => void;
   onSave: (newDescription: string) => void;
   onCancel: () => void;
   onRemove: () => void;
+  onClick: (e: React.MouseEvent) => void;
+  onRightClick: (e: React.MouseEvent) => void;
 }
 
 export const ActivityRowHeader: React.FC<ActivityRowHeaderProps> = ({
   activity,
   isEditing,
   isHovered,
+  isSelected,
+  groupColor,
   onEdit,
   onSave,
   onCancel,
-  onRemove
+  onRemove,
+  onClick,
+  onRightClick
 }) => {
+  const getBackgroundStyle = () => {
+    if (isSelected) {
+      return 'bg-blue-100 border-l-4 border-l-blue-500';
+    }
+    if (groupColor) {
+      return `${isHovered ? 'bg-gray-50' : 'bg-white'} border-l-4`;
+    }
+    return isHovered ? 'bg-gray-50' : 'bg-white';
+  };
+
+  const getBorderStyle = () => {
+    if (groupColor && !isSelected) {
+      return { borderLeftColor: groupColor };
+    }
+    return {};
+  };
+
   return (
-    <td className={`sticky left-0 px-6 py-4 border-r border-gray-300 z-[15] border-b border-gray-300 transition-colors duration-150 ${isHovered ? 'bg-gray-50' : 'bg-white'}`}>
+    <td 
+      className={`sticky left-0 px-6 py-4 border-r border-gray-300 z-[15] border-b border-gray-300 transition-colors duration-150 cursor-pointer select-none ${getBackgroundStyle()}`}
+      style={getBorderStyle()}
+      onClick={onClick}
+      onContextMenu={onRightClick}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <CategoryDot category={activity.category} />
-          
           <EditableText
             text={activity.description}
             isEditing={isEditing}
@@ -36,6 +63,12 @@ export const ActivityRowHeader: React.FC<ActivityRowHeaderProps> = ({
             onSave={onSave}
             onCancel={onCancel}
           />
+          
+          {isSelected && (
+            <div className="text-xs text-blue-600 font-medium">
+              Selected
+            </div>
+          )}
         </div>
         
         <button

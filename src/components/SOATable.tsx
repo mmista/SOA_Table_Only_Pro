@@ -6,6 +6,9 @@ import { VisitTypeSelector } from './VisitTypeSelector';
 import { CommentModal } from './CommentModal';
 import { ActivityCellContextMenu } from './ActivityCellContextMenu';
 import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
+import { ActivityHeaderContextMenu } from './ActivityHeaderContextMenu';
+import { ActivityGroupHeaderContextMenu } from './ActivityGroupHeaderContextMenu';
+import { ActivityGroup } from '../types/soa';
 import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
 import { StaticRowsSection } from './organisms/StaticRowsSection';
@@ -38,16 +41,29 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const [editContext, setEditContext] = useState<EditContext | null>(null);
   const [showMoveSuccess, setShowMoveSuccess] = useState(false);
   const [activities, setActivities] = useState<ActivityData[]>([]);
+  const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>(data.activityGroups || []);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ description?: string }>({});
   const [hoveredActivityRow, setHoveredActivityRow] = useState<string | null>(null);
   const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
   const [visitTypeSelector, setVisitTypeSelector] = useState<{
+    isOpen: boolean,
+    position: { x: number, y: number },
+    activityId: string,
+    dayId: string,
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    activityId: '',
+    dayId: ''
+  });
+
+  const [groupHeaderContextMenu, setGroupHeaderContextMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
-    activityId: string;
-    dayId: string;
-  } | null>(null);
+    groupId: string | null;
+    groupName: string;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, groupId: null, groupName: '' });
   
   // New states for cell selection and context menu
   const [selectedActivityCells, setSelectedActivityCells] = useState<Set<string>>(new Set());
@@ -70,6 +86,21 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   
   // State for VisitLinkPanel
   const [visitLinkPanelState, setVisitLinkPanelState] = useState<VisitLinkPanelState>({ isOpen: false, dayId: null });
+  
+  // State for Activity Header Selection and Grouping
+  const [selectedActivityHeaders, setSelectedActivityHeaders] = useState<Set<string>>(new Set());
+  const [activityHeaderContextMenuState, setActivityHeaderContextMenuState] = useState<{
+    isOpen: boolean;
+    x: number;
+    y: number;
+    clickedActivityId: string | null;
+  }>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+    clickedActivityId: null
+  });
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   
   // Comments hook
   const {
@@ -349,6 +380,141 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       )
     };
     setActivities(prev => [...prev, newActivity]);
+  };
+
+  // Activity Header Selection and Grouping Functions
+  const handleActivityHeaderClick = (activityId: string, event: React.MouseEvent) => {
+    if (event.shiftKey) {
+      // Shift+click for multi-selection
+      setSelectedActivityHeaders(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(activityId)) {
+          newSet.delete(activityId);
+        } else {
+          newSet.add(activityId);
+        }
+        return newSet;
+      });
+    } else {
+      // Regular click - select only this activity
+      setSelectedActivityHeaders(new Set([activityId]));
+    }
+  };
+
+  const handleActivityHeaderRightClick = (e: React.MouseEvent, activityId: string) => {
+    e.preventDefault();
+    
+    // If right-clicking on a non-selected activity, clear selection and select this activity
+    if (!selectedActivityHeaders.has(activityId)) {
+      setSelectedActivityHeaders(new Set([activityId]));
+    }
+    
+    setActivityHeaderContextMenuState({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      clickedActivityId: activityId
+    });
+  };
+
+  const handleActivityGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
+    e.preventDefault();
+    const group = activityGroups.find(g => g.id === groupId);
+    setGroupHeaderContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      groupId: groupId,
+      groupName: group?.name || 'Unknown Group'
+    });
+  };
+
+  const generateGroupId = () => `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  const getNextGroupNumber = () => {
+    const existingNumbers = activityGroups
+      .map(group => {
+        const match = group.name.match(/^Group (\d+)$/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter(num => num > 0);
+    
+    return existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+  };
+
+  const groupSelectedActivityHeaders = () => {
+    if (selectedActivityHeaders.size < 2) return;
+    
+    const groupId = generateGroupId();
+    const groupNumber = getNextGroupNumber();
+    const defaultColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+    const defaultColor = defaultColors[activityGroups.length % defaultColors.length];
+    
+    const newGroup: ActivityGroup = {
+      id: groupId,
+      name: `Group ${groupNumber}`,
+      color: defaultColor,
+      activityIds: Array.from(selectedActivityHeaders)
+    };
+    
+    // Update activities with group ID
+    setActivities(prev => prev.map(activity => 
+      selectedActivityHeaders.has(activity.id) 
+        ? { ...activity, groupId }
+        : activity
+    ));
+    
+    // Add new group
+    setActivityGroups(prev => [...prev, newGroup]);
+    
+    // Clear selection
+    setSelectedActivityHeaders(new Set());
+  };
+
+  const ungroupActivityGroup = (groupId: string) => {
+    // Remove group ID from activities
+    setActivities(prev => prev.map(activity => 
+      activity.groupId === groupId 
+        ? { ...activity, groupId: undefined }
+        : activity
+    ));
+    
+    // Remove group
+    setActivityGroups(prev => prev.filter(group => group.id !== groupId));
+    
+    // Remove from collapsed groups if it was collapsed
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(groupId);
+      return newSet;
+    });
+  };
+
+  const renameActivityGroup = (groupId: string, newName: string) => {
+    setActivityGroups(prev => prev.map(group => 
+      group.id === groupId 
+        ? { ...group, name: newName }
+        : group
+    ));
+  };
+
+  const changeActivityGroupColor = (groupId: string, newColor: string) => {
+    setActivityGroups(prev => prev.map(group => 
+      group.id === groupId 
+        ? { ...group, color: newColor }
+        : group
+    ));
+  };
+
+  const toggleGroupCollapse = (groupId: string) => {
+    setCollapsedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
   };
 
   const handleRemoveActivity = (activityId: string) => {
@@ -691,7 +857,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       isOpen: true,
       x: e.clientX,
       y: e.clientY,
-      clickedCell: { activityId, dayId }
+      clickedCell: { activityId, dayId },
+      clickedTimeWindowCell: null
     });
   };
 
@@ -1155,6 +1322,18 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     onDataChange(newData);
   };
 
+  const handleUngroupGroup = (groupId: string) => {
+    ungroupActivityGroup(groupId);
+  };
+
+  const handleRenameGroup = (groupId: string, newName: string) => {
+    renameActivityGroup(groupId, newName);
+  };
+
+  const handleChangeGroupColor = (groupId: string, newColor: string) => {
+    changeActivityGroupColor(groupId, newColor);
+  };
+
   return (
     <>
       <div className="flex flex-1 bg-gray-50 w-full">
@@ -1217,6 +1396,9 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                   <ActivityRowsSection
                     data={data}
                     activities={activities}
+                    activityGroups={activityGroups}
+                    selectedActivityHeaders={selectedActivityHeaders}
+                    collapsedGroups={collapsedGroups}
                     editingActivity={editingActivity}
                     hoveredActivityRow={hoveredActivityRow}
                     selectedActivityCells={selectedActivityCells}
@@ -1230,6 +1412,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                     onActivitySave={handleActivitySave}
                     onActivityCancel={handleActivityCancel}
                     onActivityRemove={handleRemoveActivity}
+                    onActivityHeaderClick={handleActivityHeaderClick}
+                    onActivityHeaderRightClick={handleActivityHeaderRightClick}
                     onActivityCellClick={handleActivityCellClick}
                     onActivityCellRightClick={handleActivityCellRightClick}
                     onActivityCellCustomTextChange={handleActivityCellCustomTextChange}
@@ -1237,6 +1421,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                     onActivityCellHover={handleActivityCellHover}
                     onActivityRowHover={setHoveredActivityRow}
                     onAddActivity={handleAddActivity}
+                    onToggleGroupCollapse={toggleGroupCollapse}
+                    onRenameGroup={renameActivityGroup}
+                    onChangeGroupColor={changeActivityGroupColor}
+                    onUngroupGroup={ungroupActivityGroup}
                   />
                 </tbody>
               </table>
@@ -1340,6 +1528,31 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         onClose={() => setContextMenuState({ isOpen: false, x: 0, y: 0, clickedCell: null, clickedTimeWindowCell: null })}
       />
       
+      <ActivityHeaderContextMenu
+        isOpen={activityHeaderContextMenuState.isOpen}
+        position={{ x: activityHeaderContextMenuState.x, y: activityHeaderContextMenuState.y }}
+        selectedActivityHeaders={selectedActivityHeaders}
+        clickedActivityId={activityHeaderContextMenuState.clickedActivityId}
+        activityGroups={activityGroups}
+        activities={activities}
+        onGroup={groupSelectedActivityHeaders}
+        onUngroup={ungroupActivityGroup}
+        onRename={(groupId) => {
+          const group = activityGroups.find(g => g.id === groupId);
+          if (group) {
+            const newName = prompt('Enter new group name:', group.name);
+            if (newName && newName.trim() !== group.name) {
+              renameActivityGroup(groupId, newName.trim());
+            }
+          }
+        }}
+        onChangeColor={(groupId) => {
+          // This will be handled by the color picker in ActivityGroupHeader
+          console.log('Change color for group:', groupId);
+        }}
+        onClose={() => setActivityHeaderContextMenuState({ isOpen: false, x: 0, y: 0, clickedActivityId: null })}
+      />
+      
       <EmptyGroupModal
         isOpen={!!emptyGroup}
         groupName={emptyGroup?.name || ''}
@@ -1347,6 +1560,18 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         onKeepEmpty={handleKeepEmptyGroup}
         onDelete={handleDeleteEmptyGroup}
         onClose={closeEmptyGroupModal}
+      />
+
+      {/* Group Header Context Menu */}
+      <ActivityGroupHeaderContextMenu
+        isOpen={groupHeaderContextMenu.isOpen}
+        position={groupHeaderContextMenu.position}
+        groupId={groupHeaderContextMenu.groupId}
+        groupName={groupHeaderContextMenu.groupName}
+        onUngroup={handleUngroupGroup}
+        onRename={handleRenameGroup}
+        onChangeColor={handleChangeGroupColor}
+        onClose={() => setGroupHeaderContextMenu(prev => ({ ...prev, isOpen: false }))}
       />
 
       {/* Visit Link Panel */}

@@ -28,6 +28,7 @@ export interface Period {
 export interface SOAData {
   periods: Period[];
   activities?: ActivityData[];
+  activityGroups?: ActivityGroup[];
   visitLinks?: VisitLink[];
   timeRelativeCells?: TimeRelativeCell[];
   timeWindowCells?: TimeWindowCell[];
@@ -68,6 +69,7 @@ export interface ActivityData {
   category: 'visit' | 'lab' | 'imaging' | 'questionnaire' | 'other';
   variableIds?: string[];
   cells: ActivityCell[];
+  groupId?: string;
 }
 
 export interface ActivityCell {
@@ -109,6 +111,13 @@ export interface Comment {
   createdAt: Date;
   updatedAt: Date;
   author?: string;
+}
+
+export interface ActivityGroup {
+  id: string;
+  name: string;
+  color: string;
+  activityIds: string[];
 }
 
 export interface CommentModalState {
