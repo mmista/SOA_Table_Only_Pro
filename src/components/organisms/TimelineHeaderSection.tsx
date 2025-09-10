@@ -2,12 +2,10 @@ import React from 'react';
 import { SOAData, EditableItemType } from '../../types/soa';
 import { DraggableCell } from '../DraggableCell';
 import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
-import { HiddenHeadersContainer } from '../molecules/HiddenHeadersContainer';
-import { useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 
 interface TimelineHeaderSectionProps {
   data: SOAData;
-  headers: any[];
+  headerManagement: ReturnType<typeof import('../../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
   dragState: {
     isDragging: boolean;
     draggedItem: any;
@@ -34,7 +32,7 @@ interface TimelineHeaderSectionProps {
 
 export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   data,
-  headers,
+  headerManagement,
   dragState,
   hoveredItems,
   onDragStart,
@@ -48,24 +46,10 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   hasComment,
   onCommentClick
 }) => {
-  const {
-    visibleHeaders,
-    hiddenHeaders,
-    editingHeaderId,
-    isHiddenContainerExpanded,
-    startEditingHeader,
-    saveHeaderLabel,
-    cancelEditingHeader,
-    hideHeader,
-    showHeader,
-    toggleHiddenContainer,
-    restoreAllHeaders,
-    hasHiddenHeaders
-  } = useTimelineHeaderManagement();
 
   // Helper function to get header by type from centralized state
   const getHeaderByType = (type: string) => {
-    return headers?.find(header => header.type === type);
+    return headerManagement.headers?.find(header => header.type === type);
   };
 
   // Check if a header type should be visible
@@ -161,12 +145,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               <EditableHeaderLabel
                 id={header?.id || 'period'}
                 label={header?.label || 'PERIOD'}
-                isEditing={editingHeaderId === header?.id}
+                isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
-                onStartEdit={startEditingHeader}
-                onSaveLabel={saveHeaderLabel}
-                onCancelEdit={cancelEditingHeader}
-                onToggleVisibility={hideHeader}
+                onStartEdit={headerManagement.startEditingHeader}
+                onSaveLabel={headerManagement.saveHeaderLabel}
+                onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleVisibility={headerManagement.hideHeader}
                 className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]"
               />
             );
@@ -193,12 +177,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               <EditableHeaderLabel
                 id={header?.id || 'cycle'}
                 label={header?.label || 'CYCLE'}
-                isEditing={editingHeaderId === header?.id}
+                isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
-                onStartEdit={startEditingHeader}
-                onSaveLabel={saveHeaderLabel}
-                onCancelEdit={cancelEditingHeader}
-                onToggleVisibility={hideHeader}
+                onStartEdit={headerManagement.startEditingHeader}
+                onSaveLabel={headerManagement.saveHeaderLabel}
+                onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
@@ -226,12 +210,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               <EditableHeaderLabel
                 id={header?.id || 'week'}
                 label={header?.label || 'WEEK'}
-                isEditing={editingHeaderId === header?.id}
+                isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
-                onStartEdit={startEditingHeader}
-                onSaveLabel={saveHeaderLabel}
-                onCancelEdit={cancelEditingHeader}
-                onToggleVisibility={hideHeader}
+                onStartEdit={headerManagement.startEditingHeader}
+                onSaveLabel={headerManagement.saveHeaderLabel}
+                onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
@@ -261,12 +245,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               <EditableHeaderLabel
                 id={header?.id || 'day'}
                 label={header?.label || 'DAY'}
-                isEditing={editingHeaderId === header?.id}
+                isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
-                onStartEdit={startEditingHeader}
-                onSaveLabel={saveHeaderLabel}
-                onCancelEdit={cancelEditingHeader}
-                onToggleVisibility={hideHeader}
+                onStartEdit={headerManagement.startEditingHeader}
+                onSaveLabel={headerManagement.saveHeaderLabel}
+                onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
@@ -287,18 +271,6 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
             )
           )}
         </tr>
-      )}
-      
-      {/* Hidden Headers Container */}
-      {hasHiddenHeaders && (
-        <HiddenHeadersContainer
-          hiddenHeaders={hiddenHeaders}
-          isExpanded={isHiddenContainerExpanded}
-          onToggleExpanded={toggleHiddenContainer}
-          onRestoreHeader={showHeader}
-          onRestoreAll={restoreAllHeaders}
-          totalColumns={getTotalColumns()}
-        />
       )}
     </thead>
   );
