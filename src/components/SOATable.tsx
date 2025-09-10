@@ -875,6 +875,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <TableHeader
+              title="SOA Builder - Prototype"
               totalDays={getTotalDays()}
               commentStats={commentStats}
               selectedCellsCount={selectedActivityCells.size}
