@@ -1,15 +1,14 @@
-import { User, Phone, Package, Monitor } from 'lucide-react';
 import React, { useState } from 'react';
-import { Plus, Undo2, Move, CheckCircle, Link, Edit2, Check, X, Minus, MessageSquare } from 'lucide-react';
 import { SOAData, Period, Cycle, Week, Day, EditContext, EditableItemType, ActivityData, ActivityCell, VisitType } from '../types/soa';
 import { EditPanel } from './EditPanel';
-import { DraggableCell } from './DraggableCell';
 import { EmptyGroupModal } from './EmptyGroupModal';
-import { TimelineHeaders } from './TimelineHeaders';
-import { ActivityCell as ActivityCellComponent } from './ActivityCell';
 import { VisitTypeSelector } from './VisitTypeSelector';
 import { CommentModal } from './CommentModal';
 import { ActivityCellContextMenu } from './ActivityCellContextMenu';
+import { TableHeader } from './molecules/TableHeader';
+import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
+import { StaticRowsSection } from './organisms/StaticRowsSection';
+import { ActivityRowsSection } from './organisms/ActivityRowsSection';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { useVisitLinks } from '../hooks/useVisitLinks';
 import { useComments } from '../hooks/useComments';
@@ -126,16 +125,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
   };
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'visit': return 'bg-blue-500';
-      case 'lab': return 'bg-green-500';
-      case 'imaging': return 'bg-purple-500';
-      case 'questionnaire': return 'bg-orange-500';
-      default: return 'bg-gray-500';
-    }
-  };
 
   // Helper function to get cell key
   const getCellKey = (activityId: string, dayId: string) => `${activityId}_${dayId}`;
@@ -308,19 +297,17 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
     }
   };
 
-  const confirmEdit = () => {
-    if (editingActivity && editValues.description) {
-      setActivities(prev => prev.map(activity => 
-        activity.id === editingActivity 
-          ? { ...activity, description: editValues.description! }
-          : activity
-      ));
-      setEditingActivity(null);
-    }
+  const handleActivitySave = (activityId: string, newDescription: string) => {
+    setActivities(prev => prev.map(activity => 
+      activity.id === activityId 
+        ? { ...activity, description: newDescription }
+        : activity
+    ));
+    setEditingActivity(null);
     setEditValues({});
   };
 
-  const cancelEdit = () => {
+  const handleActivityCancel = () => {
     setEditingActivity(null);
     setEditValues({});
   };
@@ -865,486 +852,115 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
     return activity?.cells.find(c => c.dayId === dayId);
   };
 
-  const renderDraggableCell = (
-    title: string,
-    colSpan: number,
-    type: EditableItemType,
-    item: any,
-    bgColor: string,
-    subtitle?: string
-  ) => {
-    const cellKey = `${type}:${item.id}`;
-    const isHovered = hoveredCell?.id === item.id && hoveredCell?.type === type;
-    const isDragging = dragState.isDragging && dragState.draggedItem?.id === item.id;
-    const isValidDropTarget = dragState.isDragging && 
-      dragState.draggedItem?.id !== item.id &&
-      (validateDrop(dragState.draggedType, type, 'before') ||
-       validateDrop(dragState.draggedType, type, 'after') ||
-       validateDrop(dragState.draggedType, type, 'inside'));
-    
-    return (
-      <DraggableCell
-        key={item.id}
-        title={title}
-        subtitle={subtitle}
-        colSpan={colSpan}
-        type={type}
-        item={item}
-        bgColor={bgColor}
-        isDragging={isDragging}
-        isHovered={isHovered}
-        isValidDropTarget={isValidDropTarget}
-        hoveredDropZone={dragState.hoveredDropZone}
-        hasComment={hasComment(item.id, type)}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDrop={handleDropWithAnimation}
-        onMouseEnter={() => setHoveredCell({ type, id: item.id, side: 'left' })}
-        onMouseLeave={() => setHoveredCell(null)}
-        onClick={() => handleCellClick(item, type)}
-        onAddItem={handleAddItem}
-        setHoveredDropZone={setHoveredDropZone}
-        onCommentClick={(e) => handleCommentClick(e, item.id, type)}
-      />
-    );
+  // Create hover state for timeline items
+  const hoveredItems = {
+    period: hoveredCell?.type === 'period' ? hoveredCell.id : null,
+    cycle: hoveredCell?.type === 'cycle' ? hoveredCell.id : null,
+    week: hoveredCell?.type === 'week' ? hoveredCell.id : null,
+    day: hoveredCell?.type === 'day' ? hoveredCell.id : null
+  };
+
+  const handleItemHover = (type: EditableItemType, id: string | null) => {
+    if (id) {
+      setHoveredCell({ type, id, side: 'left' });
+    } else {
+      setHoveredCell(null);
+    }
   };
 
   return (
     <>
       <div className="flex bg-gray-50 w-full">
-      <div className="flex-1 p-6">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold flex items-center space-x-2">
-                <Move className="w-5 h-5" />
-                <span>Schedule of Activities (SOA) Editor</span>
-                {commentStats.total > 0 && (
-                  <div className="flex items-center space-x-1 text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                    <MessageSquare className="w-3 h-3" />
-                    <span>{commentStats.total} comment{commentStats.total !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-                {selectedActivityCells.size > 0 && (
-                  <div className="flex items-center space-x-1 text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>{selectedActivityCells.size} cell{selectedActivityCells.size !== 1 ? 's' : ''} selected</span>
-                  </div>
-                )}
-              </h1>
-              <p className="text-gray-300 text-sm mt-1">
-                Clinical Trial Timeline - {getTotalDays()} total study days
-                {dragState.isDragging && (
-                  <span className="ml-2 text-yellow-300">
-                    • Dragging {dragState.draggedType}: "{dragState.draggedItem?.name}"
-                  </span>
-                )}
-                {showMoveSuccess && (
-                  <span className="ml-2 text-green-300 flex items-center space-x-1">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>• Move completed successfully</span>
-                  </span>
-                )}
-              </p>
-            </div>
+        <div className="flex-1 p-6">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <TableHeader
+              totalDays={getTotalDays()}
+              commentStats={commentStats}
+              selectedCellsCount={selectedActivityCells.size}
+              dragState={dragState}
+              showMoveSuccess={showMoveSuccess}
+              canUndo={canUndo}
+              historyLength={history.length}
+              onUndo={undo}
+            />
             
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={undo}
-                disabled={!canUndo}
-                className={`
-                  flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors
-                  ${canUndo 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  }
-                `}
-              >
-                <Undo2 className="w-4 h-4" />
-                <span>Undo</span>
-                {history.length > 0 && (
-                  <span className="bg-blue-500 text-xs px-1 rounded">
-                    {history.length}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]">
-                    <span className="font-normal text-xs text-gray-500 uppercase tracking-wider">PERIOD</span>
-                  </th>
-                  {data.periods.map(period => {
-                    const totalDaysInPeriod = period.cycles.reduce((total, cycle) => {
-                      return total + cycle.weeks.reduce((weekTotal, week) => {
-                        return weekTotal + week.days.length;
-                      }, 0);
-                    }, 0);
-                    
-                    return renderDraggableCell(
-                      period.name,
-                      totalDaysInPeriod,
-                      'period',
-                      period,
-                      'bg-blue-100',
-                      `${period.duration || totalDaysInPeriod} days`
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {/* Cycle Row */}
-                <tr>
-                  <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-                    CYCLE
-                  </td>
-                  {data.periods.map(period =>
-                    period.cycles.map(cycle => {
-                      const totalDaysInCycle = cycle.weeks.reduce((total, week) => {
-                        return total + week.days.length;
-                      }, 0);
-                      
-                      return renderDraggableCell(
-                        cycle.name,
-                        totalDaysInCycle,
-                        'cycle',
-                        cycle,
-                        'bg-green-100',
-                        `${cycle.duration || totalDaysInCycle} days`
-                      );
-                    })
-                  )}
-                </tr>
-
-                {/* Week Row */}
-                <tr>
-                  <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-                    WEEK
-                  </td>
-                  {data.periods.map(period =>
-                    period.cycles.map(cycle =>
-                      cycle.weeks.map(week =>
-                        renderDraggableCell(
-                          week.name,
-                          week.days.length,
-                          'week',
-                          week,
-                          'bg-orange-100',
-                          `${week.duration || 7} days`
-                        )
-                      )
-                    )
-                  )}
-                </tr>
-
-                {/* Day Row */}
-                <tr>
-                  <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-                    DAY
-                  </td>
-                  {data.periods.map(period =>
-                    period.cycles.map(cycle =>
-                      cycle.weeks.map(week =>
-                        week.days.map(day =>
-                          renderDraggableCell(
-                            day.name,
-                            1,
-                            'day',
-                            day,
-                            'bg-purple-100',
-                            undefined
-                          )
-                        )
-                      )
-                    )
-                  )}
-                </tr>
-
-                {/* Time of Day Row */}
-                <tr>
-                  <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-                    TIME OF DAY
-                  </td>
-                  {data.periods.map(period =>
-                    period.cycles.map(cycle =>
-                      cycle.weeks.map(week =>
-                        week.days.map((day, dayIndex) => (
-                          <td key={`time-${day.id}`} className="border border-gray-300 px-3 py-2 text-center text-xs">
-                            {dayIndex % 2 === 0 ? 'Morning' : 'Afternoon'}
-                          </td>
-                        ))
-                      )
-                    )
-                  )}
-                </tr>
-
-                {/* Allowed Window Row */}
-                <tr>
-                  <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-                    ALLOWED WINDOW
-                  </td>
-                  {data.periods.map(period =>
-                    period.cycles.map(cycle =>
-                      cycle.weeks.map(week =>
-                        week.days.map((day, dayIndex) => (
-                          <td key={`window-${day.id}`} className="border border-gray-300 px-3 py-2 text-center text-xs">
-                            {dayIndex % 3 === 0 ? '±1d' : dayIndex % 3 === 1 ? '±2h' : '±4h'}
-                          </td>
-                        ))
-                      )
-                    )
-                  )}
-                </tr>
-
-                {/* Visit Label Row */}
-                <tr>
-                  <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-                    VISIT LABEL
-                  </td>
-                  {data.periods.map((period, periodIndex) =>
-                    period.cycles.map((cycle, cycleIndex) =>
-                      cycle.weeks.map((week, weekIndex) =>
-                        week.days.map((day, dayIndex) => {
-                          // Calculate visit number based on position
-                          let visitNumber = 1;
-                          
-                          // Add days from previous periods
-                          for (let p = 0; p < periodIndex; p++) {
-                            visitNumber += data.periods[p].cycles.reduce((total, c) => 
-                              total + c.weeks.reduce((weekTotal, w) => weekTotal + w.days.length, 0), 0
-                            );
-                          }
-                          
-                          // Add days from previous cycles in current period
-                          const currentPeriod = data.periods[periodIndex];
-                          for (let c = 0; c < cycleIndex; c++) {
-                            visitNumber += currentPeriod.cycles[c].weeks.reduce((total, w) => total + w.days.length, 0);
-                          }
-                          
-                          // Add days from previous weeks in current cycle
-                          const currentCycle = currentPeriod.cycles[cycleIndex];
-                          for (let w = 0; w < weekIndex; w++) {
-                            visitNumber += currentCycle.weeks[w].days.length;
-                          }
-                          
-                          // Add current day index
-                          visitNumber += dayIndex;
-                          
-                          const isLinked = isVisitLinked(day.id);
-                          const linkInfo = getVisitLinkInfo(day.id);
-                          const isHighlighted = shouldHighlightVisit(day.id);
-                          
-                          return (
-                            <td 
-                              key={`visit-${day.id}`} 
-                              className={`
-                                border border-gray-300 px-3 py-2 text-center text-xs font-medium
-                                transition-all duration-200 relative
-                                ${isHighlighted ? 'bg-blue-100 border-blue-300' : ''}
-                                ${isLinked ? 'cursor-pointer hover:bg-blue-50' : ''}
-                              `}
-                              onMouseEnter={() => handleVisitHover(day.id)}
-                              onMouseLeave={() => handleVisitHover(null)}
-                              title={isLinked ? `Linked with: ${getLinkedVisits(day.id).map(id => {
-                                // Find visit number for linked visit
-                                let linkedVisitNumber = 1;
-                                let found = false;
-                                
-                                for (const p of data.periods) {
-                                  for (const c of p.cycles) {
-                                    for (const w of c.weeks) {
-                                      for (const d of w.days) {
-                                        if (d.id === id) {
-                                          found = true;
-                                          break;
-                                        }
-                                        linkedVisitNumber++;
-                                      }
-                                      if (found) break;
-                                    }
-                                    if (found) break;
-                                  }
-                                  if (found) break;
-                                }
-                                
-                                return `V${linkedVisitNumber}`;
-                              }).join(', ')}` : undefined}
-                            >
-                              <div className="flex items-center justify-center space-x-1">
-                                <span>V{visitNumber}</span>
-                                {isLinked && (
-                                  <Link className="w-3 h-3 text-blue-500" strokeWidth={2} />
-                                )}
-                              </div>
-                              
-                              {/* Link indicator tooltip */}
-                              {isLinked && isHighlighted && (
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-50">
-                                  {linkInfo?.name || 'Linked visits'}
-                                </div>
-                              )}
-                            </td>
-                          );
-                        })
-                      )
-                    )
-                  )}
-                </tr>
-
-                {/* Trial Activities Rows */}
-                {activities.map((activity) => (
-                  <tr 
-                    key={activity.id} 
-                    className="group transition-colors duration-150"
-                    onMouseEnter={() => setHoveredActivityRow(activity.id)}
-                    onMouseLeave={() => setHoveredActivityRow(null)}
-                  >
-                    <td className={`sticky left-0 px-6 py-4 border-r border-gray-300 z-[15] border-b border-gray-300 transition-colors duration-150 ${hoveredActivityRow === activity.id ? 'bg-gray-50' : 'bg-white'}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          {/* Category dot */}
-                          <div className={`w-3 h-3 rounded-full ${getCategoryColor(activity.category)}`}></div>
-                          
-                          {/* Editable name or input */}
-                          {editingActivity === activity.id ? (
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="text"
-                                value={editValues.description || ''}
-                                onChange={(e) => setEditValues({ ...editValues, description: e.target.value })}
-                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                onKeyPress={(e) => e.key === 'Enter' && confirmEdit()}
-                                onKeyDown={(e) => e.key === 'Escape' && cancelEdit()}
-                                autoFocus
-                              />
-                              <button onClick={confirmEdit} className="text-green-600 hover:text-green-700">
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button onClick={cancelEdit} className="text-red-600 hover:text-red-700">
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleActivityEdit(activity.id)}
-                              className="text-sm font-medium text-gray-900 hover:text-blue-600 flex items-center space-x-1 text-left"
-                            >
-                              <span className="max-w-[180px] truncate">{activity.description}</span>
-                              <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                          )}
-                        </div>
-                        
-                        {/* Delete button */}
-                        <button
-                          onClick={() => handleRemoveActivity(activity.id)}
-                          className="text-red-600 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                    {data.periods.map(period =>
-                      period.cycles.map(cycle =>
-                        cycle.weeks.map(week =>
-                          week.days.map((day) => {
-                            const cellData = getActivityCell(activity.id, day.id);
-                            const isHighlighted = shouldHighlightActivityCell(day.id, activity.id);
-                            const activityCellKey = `activity:${activity.id}:${day.id}`;
-                            const cellKey = getCellKey(activity.id, day.id);
-                            const isSelected = selectedActivityCells.has(cellKey);
-                            
-                            return (
-                              <ActivityCellComponent
-                                key={`${activity.id}-${day.id}`}
-                                isActive={cellData?.isActive || false}
-                                visitType={cellData?.visitType}
-                                footnote={cellData?.footnote}
-                                customText={cellData?.customText}
-                                isHighlighted={isHighlighted}
-                                isLinked={isVisitLinked(day.id)}
-                                isRowHovered={hoveredActivityRow === activity.id}
-                                hasComment={hasComment(activityCellKey, 'activity')}
-                                isSelected={isSelected}
-                                colspan={cellData?.colspan}
-                                rowspan={cellData?.rowspan}
-                                isMergedPlaceholder={cellData?.isMergedPlaceholder}
-                                onClick={(e) => handleActivityCellClick(activity.id, day.id, e)}
-                                onRightClick={(e) => handleActivityCellRightClick(e, activity.id, day.id)}
-                                onCommentClick={(e) => handleCommentClick(e, activityCellKey, 'activity')}
-                                onMouseEnter={() => handleActivityCellHover(day.id, activity.id)}
-                                onMouseLeave={() => handleActivityCellHover(null, null)}
-                                onCustomTextChange={(newText) => handleActivityCellCustomTextChange(activity.id, day.id, newText)}
-                              />
-                            );
-                          })
-                        )
-                      )
-                    )}
-                  </tr>
-                ))}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <TimelineHeaderSection
+                  data={data}
+                  dragState={dragState}
+                  hoveredItems={hoveredItems}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDrop={handleDropWithAnimation}
+                  onItemHover={handleItemHover}
+                  onItemClick={handleCellClick}
+                  onAddItem={handleAddItem}
+                  setHoveredDropZone={setHoveredDropZone}
+                  validateDrop={validateDrop}
+                  hasComment={hasComment}
+                  onCommentClick={handleCommentClick}
+                />
                 
-                {/* Add Activity Row */}
-                <tr>
-                  <td className="sticky left-0 bg-white px-6 py-4 border-r border-gray-300 z-[15] border-b border-gray-300">
-                    <button
-                      onClick={handleAddActivity}
-                      className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Add Activity</span>
-                    </button>
-                  </td>
-                  <td colSpan={getTotalDays()} className="border border-gray-300 bg-gray-50"></td>
-                </tr>
-              </tbody>
-            </table>
+                <tbody>
+                  <StaticRowsSection
+                    data={data}
+                    isVisitLinked={isVisitLinked}
+                    getLinkedVisits={getLinkedVisits}
+                    getVisitLinkInfo={getVisitLinkInfo}
+                    shouldHighlightVisit={shouldHighlightVisit}
+                    handleVisitHover={handleVisitHover}
+                  />
+                  
+                  <ActivityRowsSection
+                    data={data}
+                    activities={activities}
+                    editingActivity={editingActivity}
+                    hoveredActivityRow={hoveredActivityRow}
+                    selectedActivityCells={selectedActivityCells}
+                    getTotalDays={getTotalDays}
+                    getActivityCell={getActivityCell}
+                    getCellKey={getCellKey}
+                    isVisitLinked={isVisitLinked}
+                    shouldHighlightActivityCell={shouldHighlightActivityCell}
+                    hasComment={hasComment}
+                    onActivityEdit={handleActivityEdit}
+                    onActivitySave={handleActivitySave}
+                    onActivityCancel={handleActivityCancel}
+                    onActivityRemove={handleRemoveActivity}
+                    onActivityCellClick={handleActivityCellClick}
+                    onActivityCellRightClick={handleActivityCellRightClick}
+                    onActivityCellCustomTextChange={handleActivityCellCustomTextChange}
+                    onCommentClick={handleCommentClick}
+                    onActivityCellHover={handleActivityCellHover}
+                    onActivityRowHover={setHoveredActivityRow}
+                    onAddActivity={handleAddActivity}
+                  />
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      {editContext && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setEditContext(null)}
-          />
-          {/* Edit Panel */}
-          <EditPanel
-            context={editContext}
-            onSave={handleEditSave}
-            onDelete={handleDelete}
-            onCancel={() => setEditContext(null)}
-          />
-        </>
-      )}
+        {editContext && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setEditContext(null)}
+            />
+            {/* Edit Panel */}
+            <EditPanel
+              context={editContext}
+              onSave={handleEditSave}
+              onDelete={handleDelete}
+              onCancel={() => setEditContext(null)}
+            />
+          </>
+        )}
       </div>
-      
-      {/* Backdrop for EditPanel */}
-      {editContext && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setEditContext(null)}
-        />
-      )}
-      
-      {/* EditPanel */}
-      {editContext && (
-        <EditPanel
-          context={editContext}
-          onSave={handleEditSave}
-          onDelete={handleDelete}
-          onCancel={() => setEditContext(null)}
-        />
-      )}
       
       <CommentModal
-          context={editContext}
         isOpen={commentModal.isOpen}
         position={commentModal.position}
         cellId={commentModal.cellId}
