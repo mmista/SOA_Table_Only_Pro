@@ -184,6 +184,7 @@ const initialTimeOfDayCells = allDays.map((day, index) => ({
 
 const initialData: SOAData = {
   periods: initialPeriods,
+  activityGroups: [],
   timeRelativeCells: initialTimeRelativeCells,
   timeWindowCells: initialTimeWindowCells,
   timeOfDayCells: initialTimeOfDayCells,
