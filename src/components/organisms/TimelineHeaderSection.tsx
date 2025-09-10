@@ -151,7 +151,6 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
                 onToggleVisibility={headerManagement.hideHeader}
-                className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]"
               />
             );
           })()}
