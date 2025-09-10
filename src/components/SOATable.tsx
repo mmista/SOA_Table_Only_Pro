@@ -47,7 +47,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const [hoveredActivityRow, setHoveredActivityRow] = useState<string | null>(null);
   const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
   const [visitTypeSelector, setVisitTypeSelector] = useState<{
-    isOpen: boolean;
+    isOpen: boolean,
     position: { x: number; y: number };
     activityId: string;
     dayId: string;
