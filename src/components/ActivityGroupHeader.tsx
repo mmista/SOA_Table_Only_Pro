@@ -10,6 +10,7 @@ interface ActivityGroupHeaderProps {
   onRename: (groupId: string, newName: string) => void;
   onChangeColor: (groupId: string, newColor: string) => void;
   onUngroup: (groupId: string) => void;
+  onRightClick: (e: React.MouseEvent, groupId: string) => void;
 }
 
 const GROUP_COLORS = [
@@ -30,7 +31,8 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   onToggleCollapse,
   onRename,
   onChangeColor,
-  onUngroup
+  onUngroup,
+  onRightClick
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(group.name);
