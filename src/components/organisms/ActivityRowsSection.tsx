@@ -4,6 +4,7 @@ import { SOAData, ActivityData, ActivityCell, ActivityGroup } from '../../types/
 import { ActivityRowHeader } from '../molecules/ActivityRowHeader';
 import { ActivityCell as ActivityCellComponent } from '../ActivityCell';
 import { ActivityGroupHeader } from '../ActivityGroupHeader';
+import { ActivityGroupHeaderContextMenu } from '../ActivityGroupHeaderContextMenu';
 
 interface ActivityRowsSectionProps {
   data: SOAData;
@@ -72,6 +73,29 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
   onChangeGroupColor,
   onUngroupGroup
 }) => {
+  const [groupHeaderContextMenu, setGroupHeaderContextMenu] = React.useState<{
+    isOpen: boolean,
+    position: { x: number, y: number },
+    groupId: string | null,
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    groupId: null,
+  });
+
+  const handleGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
+    e.preventDefault();
+    setGroupHeaderContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      groupId,
+    });
+  };
+
+  const handleCloseGroupHeaderContextMenu = () => {
+    setGroupHeaderContextMenu(prev => ({ ...prev, isOpen: false }));
+  };
+
   // Organize activities by groups
   const ungroupedActivities = activities.filter(activity => !activity.groupId);
   const groupedActivities = activityGroups.map(group => ({
@@ -158,7 +182,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
             onRename={onRenameGroup}
             onChangeColor={onChangeGroupColor}
             onUngroup={onUngroupGroup}
-            onRightClick={onGroupHeaderRightClick}
+            onRightClick={handleGroupHeaderRightClick}
           />
           {!collapsedGroups.has(group.id) && groupActivities.map(renderActivityRow)}
         </React.Fragment>
@@ -180,6 +204,19 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
         </td>
         <td colSpan={getTotalDays()} className="border border-gray-300 bg-gray-50"></td>
       </tr>
+      
+      {/* Group Header Context Menu */}
+      {groupHeaderContextMenu.isOpen && groupHeaderContextMenu.groupId && (
+        <ActivityGroupHeaderContextMenu
+          isOpen={groupHeaderContextMenu.isOpen}
+          position={groupHeaderContextMenu.position}
+          groupId={groupHeaderContextMenu.groupId}
+          onClose={handleCloseGroupHeaderContextMenu}
+          onRename={onRenameGroup}
+          onChangeColor={onChangeGroupColor}
+          onUngroup={onUngroupGroup}
+        />
+      )}
     </>
   );
 };
