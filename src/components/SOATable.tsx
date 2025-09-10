@@ -64,7 +64,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     groupId: string | null;
     groupName: string;
   }>({ isOpen: false, position: { x: 0, y: 0 }, groupId: null, groupName: '' });
-  } | null>(null);
   
   // New states for cell selection and context menu
   const [selectedActivityCells, setSelectedActivityCells] = useState<Set<string>>(new Set());
@@ -858,7 +857,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       isOpen: true,
       x: e.clientX,
       y: e.clientY,
-      clickedCell: { activityId, dayId }
+      clickedCell: { activityId, dayId },
+      clickedTimeWindowCell: null
     });
   };
 
@@ -1320,6 +1320,18 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     
     newData.timeWindowCells = updatedCells;
     onDataChange(newData);
+  };
+
+  const handleUngroupGroup = (groupId: string) => {
+    ungroupActivityGroup(groupId);
+  };
+
+  const handleRenameGroup = (groupId: string, newName: string) => {
+    renameActivityGroup(groupId, newName);
+  };
+
+  const handleChangeGroupColor = (groupId: string, newColor: string) => {
+    changeActivityGroupColor(groupId, newColor);
   };
 
   return (
