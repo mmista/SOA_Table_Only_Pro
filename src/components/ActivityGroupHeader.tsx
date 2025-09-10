@@ -98,13 +98,19 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
 
   const handleColorChange = (newColor: string) => {
     onChangeColor(group.id, newColor);
-    setShowColorPicker(false);
+    if (onOpenColorPicker) {
+      onOpenColorPicker(null);
+    } else {
+      setShowColorPicker(false);
+    }
   };
 
   const handleOpenColorPicker = () => {
-    setShowColorPicker(!showColorPicker);
-    if (onOpenColorPicker && !showColorPicker) {
-      onOpenColorPicker(group.id);
+    const newShowState = !showColorPicker;
+    if (onOpenColorPicker) {
+      onOpenColorPicker(newShowState ? group.id : null);
+    } else {
+      setShowColorPicker(newShowState);
     }
   };
 
