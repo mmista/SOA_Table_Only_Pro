@@ -44,6 +44,10 @@ export interface TimeWindowCell {
   id: string;
   dayId: string;
   value: number; // hours (will be displayed as ±[value]h)
+  colspan?: number;
+  rowspan?: number;
+  isMergedPlaceholder?: boolean;
+  customText?: string;
 }
 
 export interface TimeOfDayCell {

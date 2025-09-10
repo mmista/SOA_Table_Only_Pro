@@ -52,16 +52,20 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   // New states for cell selection and context menu
   const [selectedActivityCells, setSelectedActivityCells] = useState<Set<string>>(new Set());
   const [selectionStartCell, setSelectionStartCell] = useState<{ activityId: string; dayId: string } | null>(null);
+  const [selectedTimeWindowCells, setSelectedTimeWindowCells] = useState<Set<string>>(new Set());
+  const [timeWindowSelectionStart, setTimeWindowSelectionStart] = useState<string | null>(null);
   const [contextMenuState, setContextMenuState] = useState<{
     isOpen: boolean;
     x: number;
     y: number;
     clickedCell: { activityId: string; dayId: string } | null;
+    clickedTimeWindowCell: string | null;
   }>({
     isOpen: false,
     x: 0,
     y: 0,
-    clickedCell: null
+    clickedCell: null,
+    clickedTimeWindowCell: null
   });
   
   // State for VisitLinkPanel
@@ -944,15 +948,211 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   };
 
   const handleStaticCellClick = (dayId: string, content: string, type: EditableItemType) => {
-    // Create a mock item for the edit context
-    const item = {
-      id: dayId,
-      value: type === 'time-relative-cell' || type === 'time-window-cell' 
-        ? parseInt(content.replace(/[^\d]/g, '')) || 0
-        : content.replace('±', '').replace('h', '')
-    };
+    if (type === 'time-window-cell') {
+      // Don't open edit context for time window cells, they have their own selection logic
+      return;
+    }
     
-    setEditContext({ item, type });
+    if (type !== 'time-window-cell') {
+      // Create a mock item for the edit context
+      const item = {
+        id: dayId,
+        value: type === 'time-relative-cell' || type === 'time-window-cell' 
+          ? parseInt(content.replace(/[^\d]/g, '')) || 0
+          : content.replace('±', '').replace('h', '')
+      };
+      
+      setEditContext({ item, type });
+    }
+  };
+
+  // New function to handle time window cell clicks with selection logic
+  const handleTimeWindowCellClick = (dayId: string, event: React.MouseEvent) => {
+    if (event.shiftKey) {
+      // Shift+click for range selection
+      if (!timeWindowSelectionStart) {
+        // Start new selection
+        setTimeWindowSelectionStart(dayId);
+        setSelectedTimeWindowCells(new Set([dayId]));
+      } else {
+        // Complete range selection
+        const allDays: string[] = [];
+        data.periods.forEach(period => {
+          period.cycles.forEach(cycle => {
+            cycle.weeks.forEach(week => {
+              week.days.forEach(day => {
+                allDays.push(day.id);
+              });
+            });
+          });
+        });
+        
+        const startIndex = allDays.indexOf(timeWindowSelectionStart);
+        const endIndex = allDays.indexOf(dayId);
+        
+        if (startIndex !== -1 && endIndex !== -1) {
+          const newSelection = new Set<string>();
+          const minIndex = Math.min(startIndex, endIndex);
+          const maxIndex = Math.max(startIndex, endIndex);
+          
+          for (let i = minIndex; i <= maxIndex; i++) {
+            newSelection.add(allDays[i]);
+          }
+          
+          setSelectedTimeWindowCells(newSelection);
+        }
+      }
+    } else {
+      // Regular click - clear selection
+      setSelectedTimeWindowCells(new Set());
+      setTimeWindowSelectionStart(null);
+    }
+  };
+
+  const handleTimeWindowCellRightClick = (e: React.MouseEvent, dayId: string) => {
+    e.preventDefault();
+    
+    // If right-clicking on a non-selected cell, clear selection and select this cell
+    if (!selectedTimeWindowCells.has(dayId)) {
+      setSelectedTimeWindowCells(new Set([dayId]));
+      setTimeWindowSelectionStart(dayId);
+    }
+    
+    setContextMenuState({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      clickedCell: null,
+      clickedTimeWindowCell: dayId
+    });
+  };
+
+  // Function to merge selected time window cells
+  const mergeSelectedTimeWindowCells = () => {
+    if (selectedTimeWindowCells.size < 2) return;
+    
+    // Get all days in order
+    const allDays: string[] = [];
+    data.periods.forEach(period => {
+      period.cycles.forEach(cycle => {
+        cycle.weeks.forEach(week => {
+          week.days.forEach(day => {
+            allDays.push(day.id);
+          });
+        });
+      });
+    });
+    
+    // Find the bounds of the selection
+    const selectedDayIndices = Array.from(selectedTimeWindowCells).map(dayId => allDays.indexOf(dayId)).filter(index => index !== -1);
+    
+    if (selectedDayIndices.length === 0) return;
+    
+    const minIndex = Math.min(...selectedDayIndices);
+    const maxIndex = Math.max(...selectedDayIndices);
+    const colspan = maxIndex - minIndex + 1;
+    
+    // Find the main cell (leftmost)
+    const mainDayId = allDays[minIndex];
+    
+    // Update time window cells
+    const newData = { ...data };
+    if (!newData.timeWindowCells) newData.timeWindowCells = [];
+    
+    // Update existing cells or create new ones
+    const updatedCells = [...newData.timeWindowCells];
+    
+    // Set main cell with colspan
+    const mainCellIndex = updatedCells.findIndex(cell => cell.dayId === mainDayId);
+    if (mainCellIndex !== -1) {
+      updatedCells[mainCellIndex] = {
+        ...updatedCells[mainCellIndex],
+        colspan,
+        customText: 'Continuous'
+      };
+    } else {
+      updatedCells.push({
+        id: `time-window-${mainDayId}`,
+        dayId: mainDayId,
+        value: 24,
+        colspan,
+        customText: 'Continuous'
+      });
+    }
+    
+    // Set placeholder cells
+    for (let i = minIndex + 1; i <= maxIndex; i++) {
+      const dayId = allDays[i];
+      const cellIndex = updatedCells.findIndex(cell => cell.dayId === dayId);
+      if (cellIndex !== -1) {
+        updatedCells[cellIndex] = {
+          ...updatedCells[cellIndex],
+          isMergedPlaceholder: true
+        };
+      } else {
+        updatedCells.push({
+          id: `time-window-${dayId}`,
+          dayId: dayId,
+          value: 24,
+          isMergedPlaceholder: true
+        });
+      }
+    }
+    
+    newData.timeWindowCells = updatedCells;
+    onDataChange(newData);
+    
+    // Clear selection
+    setSelectedTimeWindowCells(new Set());
+    setTimeWindowSelectionStart(null);
+  };
+
+  // Function to unmerge a time window cell
+  const unmergeTimeWindowCell = (dayId: string) => {
+    const newData = { ...data };
+    if (!newData.timeWindowCells) return;
+    
+    // Find the main cell
+    const mainCell = newData.timeWindowCells.find(cell => cell.dayId === dayId && cell.colspan);
+    if (!mainCell) return;
+    
+    // Reset the main cell
+    const updatedCells = newData.timeWindowCells.map(cell => {
+      if (cell.dayId === dayId) {
+        return {
+          ...cell,
+          colspan: undefined,
+          customText: undefined
+        };
+      }
+      // Reset any placeholder cells
+      if (cell.isMergedPlaceholder) {
+        return {
+          ...cell,
+          isMergedPlaceholder: false
+        };
+      }
+      return cell;
+    });
+    
+    newData.timeWindowCells = updatedCells;
+    onDataChange(newData);
+  };
+
+  // Function to handle custom text changes for time window cells
+  const handleTimeWindowCellCustomTextChange = (dayId: string, newText: string) => {
+    const newData = { ...data };
+    if (!newData.timeWindowCells) newData.timeWindowCells = [];
+    
+    const updatedCells = newData.timeWindowCells.map(cell => {
+      if (cell.dayId === dayId) {
+        return { ...cell, customText: newText };
+      }
+      return cell;
+    });
+    
+    newData.timeWindowCells = updatedCells;
+    onDataChange(newData);
   };
 
   return (
@@ -965,6 +1165,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
               totalDays={getTotalDays()}
               commentStats={commentStats}
               selectedCellsCount={selectedActivityCells.size}
+              selectedTimeWindowCellsCount={selectedTimeWindowCells.size}
               dragState={dragState}
               showMoveSuccess={showMoveSuccess}
               canUndo={canUndo}
@@ -1007,6 +1208,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                     handleVisitHover={handleVisitHover}
                     onStaticCellClick={handleStaticCellClick}
                     onOpenVisitLinkPanel={openVisitLinkPanel}
+                    selectedTimeWindowCells={selectedTimeWindowCells}
+                    onTimeWindowCellClick={handleTimeWindowCellClick}
+                    onTimeWindowCellRightClick={handleTimeWindowCellRightClick}
+                    onTimeWindowCellCustomTextChange={handleTimeWindowCellCustomTextChange}
                   />
                   
                   <ActivityRowsSection
@@ -1102,12 +1307,22 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         isOpen={contextMenuState.isOpen}
         position={{ x: contextMenuState.x, y: contextMenuState.y }}
         selectedCells={selectedActivityCells}
+        selectedTimeWindowCells={selectedTimeWindowCells}
         clickedCell={contextMenuState.clickedCell}
+        clickedTimeWindowCell={contextMenuState.clickedTimeWindowCell}
         isMergedCell={contextMenuState.clickedCell ? isCellMerged(contextMenuState.clickedCell.activityId, contextMenuState.clickedCell.dayId) : false}
+        isMergedTimeWindowCell={contextMenuState.clickedTimeWindowCell ? 
+          (data.timeWindowCells?.find(cell => cell.dayId === contextMenuState.clickedTimeWindowCell && cell.colspan)?.colspan || 0) > 1 : false}
         onMerge={mergeSelectedCells}
         onUnmerge={() => {
           if (contextMenuState.clickedCell) {
             unmergeCell(contextMenuState.clickedCell.activityId, contextMenuState.clickedCell.dayId);
+          }
+        }}
+        onMergeTimeWindow={mergeSelectedTimeWindowCells}
+        onUnmergeTimeWindow={() => {
+          if (contextMenuState.clickedTimeWindowCell) {
+            unmergeTimeWindowCell(contextMenuState.clickedTimeWindowCell);
           }
         }}
         onActivateSelected={activateSelectedCells}
@@ -1122,7 +1337,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
             });
           }
         }}
-        onClose={() => setContextMenuState({ isOpen: false, x: 0, y: 0, clickedCell: null })}
+        onClose={() => setContextMenuState({ isOpen: false, x: 0, y: 0, clickedCell: null, clickedTimeWindowCell: null })}
       />
       
       <EmptyGroupModal
