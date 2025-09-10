@@ -1,5 +1,5 @@
 import React from 'react';
-import { Move, MessageSquare, CheckCircle, Undo2 } from 'lucide-react';
+import { MessageSquare, CheckCircle, Undo2 } from 'lucide-react';
 import { StatsBadge } from '../atoms/StatsBadge';
 import { DragIndicator } from '../atoms/DragIndicator';
 import { SuccessIndicator } from '../atoms/SuccessIndicator';
@@ -35,7 +35,6 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
     <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
       <div>
         <h1 className="text-xl font-bold flex items-center space-x-2">
-          <Move className="w-5 h-5" />
           <span>{title}</span>
           
           <StatsBadge
