@@ -870,8 +870,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
 
   return (
     <>
-      <div className="flex bg-gray-50 w-full">
-        <div className="flex-1 p-6">
+      <div className="flex flex-1 bg-gray-50 w-full">
+        <div className="flex-1 p-6 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <TableHeader
               totalDays={getTotalDays()}

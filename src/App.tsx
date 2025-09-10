@@ -161,7 +161,7 @@ function App() {
   const [soaData, setSoaData] = useState<SOAData>(initialData);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50">
       <SOATable 
         data={soaData} 
         onDataChange={setSoaData}
