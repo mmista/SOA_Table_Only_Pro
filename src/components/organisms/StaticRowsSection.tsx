@@ -65,7 +65,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
 
   // Check if a header type should be visible
   const getHeaderByType = (type: string) => {
-    return headers.find(header => header.type === type);
+    return headers?.find(header => header.type === type);
   };
 
   const isHeaderVisible = (type: string) => {
