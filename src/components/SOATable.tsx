@@ -888,6 +888,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
               <table className="w-full border-collapse">
                 <TimelineHeaderSection
                   data={data}
+                 headers={headerManagement.headers}
                   dragState={dragState}
                   hoveredItems={hoveredItems}
                   onDragStart={handleDragStart}
@@ -900,6 +901,12 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
                   validateDrop={validateDrop}
                   hasComment={hasComment}
                   onCommentClick={handleCommentClick}
+                 visibleHeaders={headerManagement.visibleHeaders}
+                 editingHeaderId={headerManagement.editingHeaderId}
+                 startEditingHeader={headerManagement.startEditingHeader}
+                 saveHeaderLabel={headerManagement.saveHeaderLabel}
+                 cancelEditingHeader={headerManagement.cancelEditingHeader}
+                 hideHeader={headerManagement.hideHeader}
                 />
                 
                 <tbody>

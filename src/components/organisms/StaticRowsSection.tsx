@@ -1,12 +1,19 @@
 import React from 'react';
 import { SOAData } from '../../types/soa';
+import { TimelineHeaderConfig } from '../../hooks/useTimelineHeaderManagement';
 import { StaticTableCell } from '../molecules/StaticTableCell';
 import { VisitLabelCell } from '../molecules/VisitLabelCell';
 import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
-import { useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 
 interface StaticRowsSectionProps {
   data: SOAData;
+  headers: TimelineHeaderConfig[];
+  visibleHeaders: TimelineHeaderConfig[];
+  editingHeaderId: string | null;
+  startEditingHeader: (headerId: string) => void;
+  saveHeaderLabel: (headerId: string, newLabel: string) => void;
+  cancelEditingHeader: () => void;
+  hideHeader: (headerId: string) => void;
   isVisitLinked: (dayId: string) => boolean;
   getLinkedVisits: (dayId: string) => string[];
   getVisitLinkInfo: (dayId: string) => { name?: string } | null;
@@ -16,20 +23,19 @@ interface StaticRowsSectionProps {
 
 export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   data,
+  headers,
+  visibleHeaders,
+  editingHeaderId,
+  startEditingHeader,
+  saveHeaderLabel,
+  cancelEditingHeader,
+  hideHeader,
   isVisitLinked,
   getLinkedVisits,
   getVisitLinkInfo,
   shouldHighlightVisit,
   handleVisitHover
 }) => {
-  const {
-    visibleHeaders,
-    editingHeaderId,
-    startEditingHeader,
-    saveHeaderLabel,
-    cancelEditingHeader,
-    hideHeader
-  } = useTimelineHeaderManagement();
 
   // Calculate visit number for a given day
   const calculateVisitNumber = (targetDayId: string): number => {
@@ -58,8 +64,13 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   };
 
   // Check if a header type should be visible
+  const getHeaderByType = (type: string) => {
+    return headers.find(header => header.type === type);
+  };
+
   const isHeaderVisible = (type: string) => {
-    return visibleHeaders.some(header => header.type === type);
+    const header = getHeaderByType(type);
+    return header ? header.isVisible : false;
   };
 
   return (
@@ -67,16 +78,21 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
       {/* Time of Day Row */}
       {isHeaderVisible('time-of-day') && (
         <tr>
+          {(() => {
+            const header = getHeaderByType('time-of-day');
+            return (
           <EditableHeaderLabel
-            id="time-of-day"
-            label={visibleHeaders.find(h => h.type === 'time-of-day')?.label || 'TIME OF DAY'}
-            isEditing={editingHeaderId === 'time-of-day'}
-            isVisible={true}
+                id={header?.id || 'time-of-day'}
+                label={header?.label || 'TIME OF DAY'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
             onStartEdit={startEditingHeader}
             onSaveLabel={saveHeaderLabel}
             onCancelEdit={cancelEditingHeader}
             onToggleVisibility={hideHeader}
           />
+            );
+          })()}
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
@@ -96,16 +112,21 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
       {/* Allowed Window Row */}
       {isHeaderVisible('allowed-window') && (
         <tr>
+          {(() => {
+            const header = getHeaderByType('allowed-window');
+            return (
           <EditableHeaderLabel
-            id="allowed-window"
-            label={visibleHeaders.find(h => h.type === 'allowed-window')?.label || 'ALLOWED WINDOW'}
-            isEditing={editingHeaderId === 'allowed-window'}
-            isVisible={true}
+                id={header?.id || 'allowed-window'}
+                label={header?.label || 'ALLOWED WINDOW'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
             onStartEdit={startEditingHeader}
             onSaveLabel={saveHeaderLabel}
             onCancelEdit={cancelEditingHeader}
             onToggleVisibility={hideHeader}
           />
+            );
+          })()}
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
@@ -125,16 +146,21 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
       {/* Visit Label Row */}
       {isHeaderVisible('visit') && (
         <tr>
+          {(() => {
+            const header = getHeaderByType('visit');
+            return (
           <EditableHeaderLabel
-            id="visit"
-            label={visibleHeaders.find(h => h.type === 'visit')?.label || 'VISIT LABEL'}
-            isEditing={editingHeaderId === 'visit'}
-            isVisible={true}
+                id={header?.id || 'visit'}
+                label={header?.label || 'VISIT LABEL'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
             onStartEdit={startEditingHeader}
             onSaveLabel={saveHeaderLabel}
             onCancelEdit={cancelEditingHeader}
             onToggleVisibility={hideHeader}
           />
+            );
+          })()}
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
