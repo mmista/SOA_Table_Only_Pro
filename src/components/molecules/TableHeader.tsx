@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, CheckCircle, Undo2 } from 'lucide-react';
+import { MessageSquare, CheckCircle, Undo2, Settings } from 'lucide-react';
 import { StatsBadge } from '../atoms/StatsBadge';
 import { DragIndicator } from '../atoms/DragIndicator';
 import { SuccessIndicator } from '../atoms/SuccessIndicator';
@@ -18,6 +18,7 @@ interface TableHeaderProps {
   canUndo: boolean;
   historyLength: number;
   onUndo: () => void;
+  onOpenHeaderSettings: () => void;
 }
 
 export const TableHeader: React.FC<TableHeaderProps> = ({
@@ -29,7 +30,8 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   showMoveSuccess,
   canUndo,
   historyLength,
-  onUndo
+  onUndo,
+  onOpenHeaderSettings
 }) => {
   return (
     <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
@@ -69,6 +71,15 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       </div>
       
       <div className="flex items-center space-x-2">
+        <button
+          onClick={onOpenHeaderSettings}
+          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
+          title="Timeline Header Settings"
+        >
+          <Settings className="w-4 h-4" />
+          <span>Headers</span>
+        </button>
+        
         <button
           onClick={onUndo}
           disabled={!canUndo}

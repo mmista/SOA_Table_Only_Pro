@@ -75,7 +75,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
 
   const isHeaderVisible = (type: string) => {
     const header = getHeaderByType(type);
-    return header ? header.isVisible : false;
+    return header ? (header.isActive && header.isVisible) : false;
   };
 
   return (

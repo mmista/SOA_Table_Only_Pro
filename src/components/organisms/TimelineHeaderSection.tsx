@@ -55,7 +55,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   // Check if a header type should be visible
   const isHeaderVisible = (type: string) => {
     const header = getHeaderByType(type);
-    return header ? header.isVisible : false;
+    return header ? (header.isActive && header.isVisible) : false;
   };
 
   const renderDraggableCell = (
