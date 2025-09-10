@@ -483,6 +483,42 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           }
         }
       }
+    } else if (editContext?.type === 'time-relative-cell') {
+      if (!newData.timeRelativeCells) newData.timeRelativeCells = [];
+      const cellIndex = newData.timeRelativeCells.findIndex(c => c.dayId === updatedItem.id);
+      if (cellIndex !== -1) {
+        newData.timeRelativeCells[cellIndex] = { ...newData.timeRelativeCells[cellIndex], value: updatedItem.value };
+      } else {
+        newData.timeRelativeCells.push({
+          id: `time-relative-${updatedItem.id}`,
+          dayId: updatedItem.id,
+          value: updatedItem.value
+        });
+      }
+    } else if (editContext?.type === 'time-window-cell') {
+      if (!newData.timeWindowCells) newData.timeWindowCells = [];
+      const cellIndex = newData.timeWindowCells.findIndex(c => c.dayId === updatedItem.id);
+      if (cellIndex !== -1) {
+        newData.timeWindowCells[cellIndex] = { ...newData.timeWindowCells[cellIndex], value: updatedItem.value };
+      } else {
+        newData.timeWindowCells.push({
+          id: `time-window-${updatedItem.id}`,
+          dayId: updatedItem.id,
+          value: updatedItem.value
+        });
+      }
+    } else if (editContext?.type === 'time-of-day-cell') {
+      if (!newData.timeOfDayCells) newData.timeOfDayCells = [];
+      const cellIndex = newData.timeOfDayCells.findIndex(c => c.dayId === updatedItem.id);
+      if (cellIndex !== -1) {
+        newData.timeOfDayCells[cellIndex] = { ...newData.timeOfDayCells[cellIndex], value: updatedItem.value };
+      } else {
+        newData.timeOfDayCells.push({
+          id: `time-of-day-${updatedItem.id}`,
+          dayId: updatedItem.id,
+          value: updatedItem.value
+        });
+      }
     }
 
     onDataChange(newData);
@@ -869,6 +905,18 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     }
   };
 
+  const handleStaticCellClick = (dayId: string, content: string, type: EditableItemType) => {
+    // Create a mock item for the edit context
+    const item = {
+      id: dayId,
+      value: type === 'time-relative-cell' || type === 'time-window-cell' 
+        ? parseInt(content.replace(/[^\d]/g, '')) || 0
+        : content.replace('±', '').replace('h', '')
+    };
+    
+    setEditContext({ item, type });
+  };
+
   return (
     <>
       <div className="flex flex-1 bg-gray-50 w-full">
@@ -909,12 +957,16 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                   <StaticRowsSection
                     data={data}
                     headerManagement={headerManagement}
+                    timeRelativeCells={data.timeRelativeCells || []}
+                    timeWindowCells={data.timeWindowCells || []}
+                    timeOfDayCells={data.timeOfDayCells || []}
                     totalColumns={getTotalDays()}
                     isVisitLinked={isVisitLinked}
                     getLinkedVisits={getLinkedVisits}
                     getVisitLinkInfo={getVisitLinkInfo}
                     shouldHighlightVisit={shouldHighlightVisit}
                     handleVisitHover={handleVisitHover}
+                    onStaticCellClick={handleStaticCellClick}
                   />
                   
                   <ActivityRowsSection

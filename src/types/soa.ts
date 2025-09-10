@@ -29,6 +29,27 @@ export interface SOAData {
   periods: Period[];
   activities?: ActivityData[];
   visitLinks?: VisitLink[];
+  timeRelativeCells?: TimeRelativeCell[];
+  timeWindowCells?: TimeWindowCell[];
+  timeOfDayCells?: TimeOfDayCell[];
+}
+
+export interface TimeRelativeCell {
+  id: string;
+  dayId: string;
+  value: number; // hours
+}
+
+export interface TimeWindowCell {
+  id: string;
+  dayId: string;
+  value: number; // hours (will be displayed as ±[value]h)
+}
+
+export interface TimeOfDayCell {
+  id: string;
+  dayId: string;
+  value: 'Morning' | 'Afternoon' | 'Evening';
 }
 
 export interface VisitLink {
@@ -65,8 +86,8 @@ export interface VisitTypeConfig {
   color: string;
 }
 
-export type EditableItem = Period | Cycle | Week | Day;
-export type EditableItemType = 'period' | 'cycle' | 'week' | 'day';
+export type EditableItem = Period | Cycle | Week | Day | TimeRelativeCell | TimeWindowCell | TimeOfDayCell;
+export type EditableItemType = 'period' | 'cycle' | 'week' | 'day' | 'time-relative-cell' | 'time-window-cell' | 'time-of-day-cell';
 
 export interface EditContext {
   item: EditableItem;
