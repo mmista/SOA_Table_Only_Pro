@@ -5,6 +5,7 @@ import { ActivityRowHeader } from '../molecules/ActivityRowHeader';
 import { ActivityCell as ActivityCellComponent } from '../ActivityCell';
 import { ActivityGroupHeader } from '../ActivityGroupHeader';
 import { ActivityGroupHeaderContextMenu } from '../ActivityGroupHeaderContextMenu';
+import { ColorPickerModal } from '../ColorPickerModal';
 
 interface ActivityRowsSectionProps {
   data: SOAData;
@@ -38,6 +39,13 @@ interface ActivityRowsSectionProps {
   onRenameGroup: (groupId: string, newName: string) => void;
   onChangeGroupColor: (groupId: string, newColor: string) => void;
   onUngroupGroup: (groupId: string) => void;
+}
+
+interface ColorPickerModalState {
+  isOpen: boolean;
+  groupId: string | null;
+  groupName: string;
+  currentColor: string;
 }
 
 export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
@@ -83,7 +91,12 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     groupId: null,
   });
 
-  const [openColorPickerGroupId, setOpenColorPickerGroupId] = React.useState<string | null>(null);
+  const [colorPickerModalState, setColorPickerModalState] = React.useState<ColorPickerModalState>({
+    isOpen: false,
+    groupId: null,
+    groupName: '',
+    currentColor: '#3B82F6',
+  });
 
   const handleGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
     e.preventDefault();
@@ -98,13 +111,25 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     setGroupHeaderContextMenu(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleOpenGroupColorPicker = (groupId: string) => {
-    setOpenColorPickerGroupId(groupId);
+  const handleOpenColorPicker = (groupId: string) => {
+    const group = activityGroups.find(g => g.id === groupId);
+    if (group) {
+      setColorPickerModalState({
+        isOpen: true,
+        groupId: groupId,
+        groupName: group.name,
+        currentColor: group.color,
+      });
+    }
     handleCloseGroupHeaderContextMenu();
   };
 
-  const handleGroupColorPickerToggle = (groupId: string | null) => {
-    setOpenColorPickerGroupId(groupId);
+  const handleCloseColorPicker = () => {
+    setColorPickerModalState(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleSaveGroupColor = (groupId: string, newColor: string) => {
+    onChangeGroupColor(groupId, newColor);
   };
 
   // Organize activities by groups
@@ -189,11 +214,10 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
             group={group}
             totalColumns={getTotalDays()}
             isCollapsed={collapsedGroups.has(group.id)}
-            forceShowColorPicker={openColorPickerGroupId === group.id}
             onToggleCollapse={onToggleGroupCollapse}
             onRename={onRenameGroup}
             onChangeColor={onChangeGroupColor}
-            onOpenColorPicker={handleGroupColorPickerToggle}
+            onOpenColorPicker={handleOpenColorPicker}
             onUngroup={onUngroupGroup}
             onRightClick={handleGroupHeaderRightClick}
           />
@@ -227,10 +251,20 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
           groupName={activityGroups.find(g => g.id === groupHeaderContextMenu.groupId)?.name || ''}
           onClose={handleCloseGroupHeaderContextMenu}
           onRename={onRenameGroup}
-          onChangeColor={handleOpenGroupColorPicker}
+          onChangeColor={handleOpenColorPicker}
           onUngroup={onUngroupGroup}
         />
       )}
+      
+      {/* Color Picker Modal */}
+      <ColorPickerModal
+        isOpen={colorPickerModalState.isOpen}
+        groupId={colorPickerModalState.groupId}
+        groupName={colorPickerModalState.groupName}
+        currentColor={colorPickerModalState.currentColor}
+        onClose={handleCloseColorPicker}
+        onSaveColor={handleSaveGroupColor}
+      />
     </>
   );
 };

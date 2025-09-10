@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+  onOpenColorPicker: (groupId: string) => void;
 import { Users, Edit2, Palette, Unlink, Check, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { ActivityGroup } from '../types/soa';
 
@@ -30,7 +30,6 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   group,
   totalColumns,
   isCollapsed,
-  forceShowColorPicker = false,
   onToggleCollapse,
   onRename,
   onChangeColor,
@@ -40,9 +39,7 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(group.name);
-  const [showColorPicker, setShowColorPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isEditingName && inputRef.current) {
@@ -52,28 +49,6 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   }, [isEditingName]);
 
   useEffect(() => {
-    setEditName(group.name);
-  }, [group.name]);
-
-  useEffect(() => {
-    if (forceShowColorPicker) {
-      setShowColorPicker(forceShowColorPicker);
-    }
-  }, [forceShowColorPicker]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
-        setShowColorPicker(false);
-      }
-    };
-
-    if (showColorPicker) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showColorPicker]);
-
   const handleSaveName = () => {
     if (editName.trim() && editName.trim() !== group.name) {
       onRename(group.id, editName.trim());
@@ -97,17 +72,8 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   };
 
   const handleColorChange = (newColor: string) => {
-    onChangeColor(group.id, newColor);
-    setShowColorPicker(false);
-  };
-
   const handleOpenColorPicker = () => {
-    const newShowState = !showColorPicker;
-    if (onOpenColorPicker) {
-      onOpenColorPicker(newShowState ? group.id : null);
-    } else {
-      setShowColorPicker(newShowState);
-    }
+    onOpenColorPicker(group.id);
   };
 
   return (
@@ -184,33 +150,13 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
           {/* Action Buttons */}
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {/* Color Picker */}
-            <div className="relative" ref={colorPickerRef}>
-              <button
-                onClick={handleOpenColorPicker}
-                className="p-1 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
-                title="Change group color"
-              >
-                <Palette className="w-4 h-4" />
-              </button>
-              
-              {showColorPicker && (
-                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50">
-                  <div className="grid grid-cols-4 gap-1">
-                    {GROUP_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => handleColorChange(color)}
-                        className={`w-6 h-6 rounded-full border-2 transition-all ${
-                          group.color === color ? 'border-gray-400 scale-110' : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        title={`Change to ${color}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={handleOpenColorPicker}
+              className="p-1 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+              title="Change group color"
+            >
+              <Palette className="w-4 h-4" />
+            </button>
 
             {/* Ungroup Button */}
             <button
@@ -220,21 +166,9 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
             >
               <Unlink className="w-4 h-4" />
             </button>
-          </div>
-        </div>
-      </td>
-      
-      <td 
-        className="bg-gray-50 border-l border-gray-300" 
-        colSpan={totalColumns}
-        style={{ borderLeftColor: group.color, borderLeftWidth: '4px' }}
-      >
-        <div className="flex items-center justify-center py-1">
-          <div className="text-xs text-gray-500">
             {isCollapsed ? 'Group collapsed' : 'Group expanded'}
           </div>
         </div>
       </td>
-    </tr>
   );
 };
