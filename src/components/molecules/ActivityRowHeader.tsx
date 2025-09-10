@@ -1,6 +1,5 @@
 import React from 'react';
 import { Minus } from 'lucide-react';
-import { CategoryDot } from '../atoms/CategoryDot';
 import { EditableText } from '../atoms/EditableText';
 import { ActivityData } from '../../types/soa';
 
@@ -57,8 +56,6 @@ export const ActivityRowHeader: React.FC<ActivityRowHeaderProps> = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <CategoryDot category={activity.category} />
-          
           <EditableText
             text={activity.description}
             isEditing={isEditing}
