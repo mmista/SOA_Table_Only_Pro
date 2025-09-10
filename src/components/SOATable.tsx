@@ -16,6 +16,7 @@ import { useComments } from '../hooks/useComments';
 interface SOATableProps {
   data: SOAData;
   onDataChange: (data: SOAData) => void;
+  headerManagement: ReturnType<typeof import('../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
 }
 
 interface HoverState {
@@ -24,7 +25,7 @@ interface HoverState {
   side: 'left' | 'right';
 }
 
-export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange }) => {
+export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerManagement }) => {
   const [hoveredCell, setHoveredCell] = useState<HoverState | null>(null);
   const [editContext, setEditContext] = useState<EditContext | null>(null);
   const [showMoveSuccess, setShowMoveSuccess] = useState(false);
