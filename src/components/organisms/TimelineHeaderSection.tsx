@@ -195,7 +195,6 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 `${cycle.duration || getCycleColspan(cycle)} days`
               )
             )
-          )
           )}
         </tr>
       )}
