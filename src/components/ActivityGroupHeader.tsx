@@ -1,6 +1,6 @@
-  onOpenColorPicker: (groupId: string) => void;
-import { Users, Edit2, Palette, Unlink, Check, X, ChevronDown, ChevronRight } from 'lucide-react';
+  import { Users, Edit2, Palette, Unlink, Check, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { ActivityGroup } from '../types/soa';
+import { useState, useRef, useEffect } from 'react';
 
 interface ActivityGroupHeaderProps {
   group: ActivityGroup;
@@ -48,7 +48,6 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
     }
   }, [isEditingName]);
 
-  useEffect(() => {
   const handleSaveName = () => {
     if (editName.trim() && editName.trim() !== group.name) {
       onRename(group.id, editName.trim());
@@ -72,15 +71,18 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   };
 
   const handleColorChange = (newColor: string) => {
+    onChangeColor(group.id, newColor);
+  };
+
   const handleOpenColorPicker = () => {
-    onOpenColorPicker(group.id);
+    onOpenColorPicker?.(group.id);
   };
 
   return (
     <tr className="bg-gray-50 border-t-2 border-b border-gray-200">
       <td 
         className="sticky left-0 bg-gray-50 px-4 py-3 z-[15] border-r border-gray-300"
-        colSpan={1}
+        colSpan={totalColumns}
         onContextMenu={(e) => onRightClick(e, group.id)}
       >
         <div className="flex items-center justify-between">
@@ -166,9 +168,9 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
             >
               <Unlink className="w-4 h-4" />
             </button>
-            {isCollapsed ? 'Group collapsed' : 'Group expanded'}
           </div>
         </div>
       </td>
+    </tr>
   );
 };
