@@ -5,6 +5,7 @@ import { EmptyGroupModal } from './EmptyGroupModal';
 import { VisitTypeSelector } from './VisitTypeSelector';
 import { CommentModal } from './CommentModal';
 import { ActivityCellContextMenu } from './ActivityCellContextMenu';
+import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
 import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
 import { StaticRowsSection } from './organisms/StaticRowsSection';
@@ -33,6 +34,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ description?: string }>({});
   const [hoveredActivityRow, setHoveredActivityRow] = useState<string | null>(null);
+  const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
   const [visitTypeSelector, setVisitTypeSelector] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
@@ -932,6 +934,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
               canUndo={canUndo}
               historyLength={history.length}
               onUndo={undo}
+              onOpenHeaderSettings={() => setShowHeaderSettingsModal(true)}
             />
             
             <div className="overflow-x-auto">
@@ -1016,6 +1019,28 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           </>
         )}
       </div>
+      
+      <TimelineHeaderSettingsModal
+        isOpen={showHeaderSettingsModal}
+        headers={headerManagement.headers}
+        activeHeaders={headerManagement.activeHeaders}
+        inactiveHeaders={headerManagement.inactiveHeaders}
+        editingHeaderId={headerManagement.editingHeaderId}
+        onClose={() => setShowHeaderSettingsModal(false)}
+        onStartEdit={headerManagement.startEditingHeader}
+        onSaveLabel={headerManagement.saveHeaderLabel}
+        onCancelEdit={headerManagement.cancelEditingHeader}
+        onToggleVisibility={(headerId) => {
+          const header = headerManagement.headers.find(h => h.id === headerId);
+          if (header?.isVisible) {
+            headerManagement.hideHeader(headerId);
+          } else {
+            headerManagement.showHeader(headerId);
+          }
+        }}
+        onDisableHeader={headerManagement.disableHeader}
+        onEnableHeader={headerManagement.enableHeader}
+      />
       
       <CommentModal
         isOpen={commentModal.isOpen}
