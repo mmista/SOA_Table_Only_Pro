@@ -66,6 +66,40 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
 
   return (
     <>
+      {/* Time Relative Row */}
+      {isHeaderVisible('time-relative') && (
+        <tr>
+          {(() => {
+            const header = getHeaderByType('time-relative');
+            return (
+          <EditableHeaderLabel
+                id={header?.id || 'time-relative'}
+                label={header?.label || 'TIME RELATIVE (H)'}
+                isEditing={headerManagement.editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+            onStartEdit={headerManagement.startEditingHeader}
+            onSaveLabel={headerManagement.saveHeaderLabel}
+            onCancelEdit={headerManagement.cancelEditingHeader}
+            onToggleVisibility={headerManagement.hideHeader}
+          />
+            );
+          })()}
+          {data.periods.map(period =>
+            period.cycles.map(cycle =>
+              cycle.weeks.map(week =>
+                week.days.map((day) => (
+                  <StaticTableCell
+                    key={`time-relative-${day.id}`}
+                    content="24"
+                    dayId={day.id}
+                  />
+                ))
+              )
+            )
+          )}
+        </tr>
+      )}
+
       {/* Time of Day Row */}
       {isHeaderVisible('time-of-day') && (
         <tr>
