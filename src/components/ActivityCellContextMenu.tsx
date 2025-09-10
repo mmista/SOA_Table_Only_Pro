@@ -6,10 +6,15 @@ interface ActivityCellContextMenuProps {
   isOpen: boolean;
   position: { x: number; y: number };
   selectedCells: Set<string>;
+  selectedTimeWindowCells: Set<string>;
   clickedCell: { activityId: string; dayId: string } | null;
+  clickedTimeWindowCell: string | null;
   isMergedCell: boolean;
+  isMergedTimeWindowCell: boolean;
   onMerge: () => void;
   onUnmerge: () => void;
+  onMergeTimeWindow: () => void;
+  onUnmergeTimeWindow: () => void;
   onActivateSelected: (visitType?: VisitType) => void;
   onClearSelected: () => void;
   onSetVisitTypeForSingleCell: () => void;
@@ -27,10 +32,15 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
   isOpen,
   position,
   selectedCells,
+  selectedTimeWindowCells,
   clickedCell,
+  clickedTimeWindowCell,
   isMergedCell,
+  isMergedTimeWindowCell,
   onMerge,
   onUnmerge,
+  onMergeTimeWindow,
+  onUnmergeTimeWindow,
   onActivateSelected,
   onClearSelected,
   onSetVisitTypeForSingleCell,
@@ -55,7 +65,10 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
 
   const hasSelection = selectedCells.size > 0;
   const hasMultipleSelection = selectedCells.size > 1;
+  const hasTimeWindowSelection = selectedTimeWindowCells.size > 0;
+  const hasMultipleTimeWindowSelection = selectedTimeWindowCells.size > 1;
   const isSingleCellContext = selectedCells.size === 0 || (selectedCells.size === 1 && clickedCell);
+  const isTimeWindowContext = clickedTimeWindowCell !== null;
 
   // Calculate menu position to keep it within viewport
   const getMenuStyle = () => {
@@ -104,10 +117,13 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
       >
         {/* Header */}
         <div className="px-3 py-1 text-xs font-medium text-gray-500 border-b border-gray-100 mb-1">
-          {hasSelection ? `${selectedCells.size} cell${selectedCells.size !== 1 ? 's' : ''} selected` : 'Cell Options'}
+          {hasSelection ? `${selectedCells.size} activity cell${selectedCells.size !== 1 ? 's' : ''} selected` : 
+           hasTimeWindowSelection ? `${selectedTimeWindowCells.size} time window cell${selectedTimeWindowCells.size !== 1 ? 's' : ''} selected` :
+           isTimeWindowContext ? 'Time Window Cell Options' :
+           'Cell Options'}
         </div>
         
-        {/* Merge/Unmerge Options */}
+        {/* Activity Cell Merge/Unmerge Options */}
         {hasMultipleSelection && (
           <button
             className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -117,7 +133,7 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
             }}
           >
             <Merge className="w-4 h-4 text-blue-500" />
-            <span>Merge selected cells</span>
+            <span>Merge selected activity cells</span>
           </button>
         )}
         
@@ -130,7 +146,34 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
             }}
           >
             <Split className="w-4 h-4 text-orange-500" />
-            <span>Unmerge cells</span>
+            <span>Unmerge activity cells</span>
+          </button>
+        )}
+        
+        {/* Time Window Cell Merge/Unmerge Options */}
+        {hasMultipleTimeWindowSelection && (
+          <button
+            className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            onClick={() => {
+              onMergeTimeWindow();
+              onClose();
+            }}
+          >
+            <Merge className="w-4 h-4 text-purple-500" />
+            <span>Merge selected time window cells</span>
+          </button>
+        )}
+        
+        {isMergedTimeWindowCell && (
+          <button
+            className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            onClick={() => {
+              onUnmergeTimeWindow();
+              onClose();
+            }}
+          >
+            <Split className="w-4 h-4 text-orange-500" />
+            <span>Unmerge time window cells</span>
           </button>
         )}
         

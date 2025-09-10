@@ -13,12 +13,16 @@ interface StaticRowsSectionProps {
   timeWindowCells: TimeWindowCell[];
   timeOfDayCells: TimeOfDayCell[];
   totalColumns: number;
+  selectedTimeWindowCells: Set<string>;
   isVisitLinked: (dayId: string) => boolean;
   getLinkedVisits: (dayId: string) => string[];
   getVisitLinkInfo: (dayId: string) => { name?: string } | null;
   shouldHighlightVisit: (dayId: string) => boolean;
   handleVisitHover: (dayId: string | null) => void;
   onStaticCellClick: (dayId: string, content: string, type: EditableItemType) => void;
+  onTimeWindowCellClick: (dayId: string, event: React.MouseEvent) => void;
+  onTimeWindowCellRightClick: (e: React.MouseEvent, dayId: string) => void;
+  onTimeWindowCellCustomTextChange: (dayId: string, newText: string) => void;
   onOpenVisitLinkPanel: (dayId: string) => void;
 }
 
@@ -29,12 +33,16 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   timeWindowCells,
   timeOfDayCells,
   totalColumns,
+  selectedTimeWindowCells,
   isVisitLinked,
   getLinkedVisits,
   getVisitLinkInfo,
   shouldHighlightVisit,
   handleVisitHover,
   onStaticCellClick,
+  onTimeWindowCellClick,
+  onTimeWindowCellRightClick,
+  onTimeWindowCellCustomTextChange,
   onOpenVisitLinkPanel
 }) => {
 
@@ -143,14 +151,30 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
-                  const value = getCellValue(timeWindowCells, day.id, 24);
+                  const cellData = timeWindowCells.find(cell => cell.dayId === day.id);
+                  const value = cellData?.value || 24;
+                  const isSelected = selectedTimeWindowCells.has(day.id);
+                  const isMerged = cellData && ((cellData.colspan && cellData.colspan > 1) || (cellData.rowspan && cellData.rowspan > 1));
+                  const isMergedPlaceholder = cellData?.isMergedPlaceholder;
+                  
+                  // Don't render anything if this is a merged placeholder
+                  if (isMergedPlaceholder) {
+                    return null;
+                  }
+                  
                   return (
-                    <StaticTableCell
+                    <TimeWindowCell
                       key={`window-${day.id}`}
-                      content={`±${value}h`}
                       dayId={day.id}
-                      type="time-window-cell"
-                      onClick={onStaticCellClick}
+                      value={value}
+                      customText={cellData?.customText}
+                      isSelected={isSelected}
+                      isMerged={isMerged}
+                      colspan={cellData?.colspan}
+                      rowspan={cellData?.rowspan}
+                      onClick={(e) => onTimeWindowCellClick(day.id, e)}
+                      onRightClick={(e) => onTimeWindowCellRightClick(e, day.id)}
+                      onCustomTextChange={(newText) => onTimeWindowCellCustomTextChange(day.id, newText)}
                     />
                   );
                 })

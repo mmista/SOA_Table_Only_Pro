@@ -9,6 +9,7 @@ interface TableHeaderProps {
   totalDays: number;
   commentStats: { total: number };
   selectedCellsCount: number;
+  selectedTimeWindowCellsCount: number;
   dragState: {
     isDragging: boolean;
     draggedType: string;
@@ -26,6 +27,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   totalDays,
   commentStats,
   selectedCellsCount,
+  selectedTimeWindowCellsCount,
   dragState,
   showMoveSuccess,
   canUndo,
@@ -49,8 +51,15 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
           <StatsBadge
             icon={<CheckCircle className="w-3 h-3" />}
             count={selectedCellsCount}
-            label="cell"
+            label="activity cell"
             colorClass="bg-green-100 text-green-700"
+          />
+          
+          <StatsBadge
+            icon={<CheckCircle className="w-3 h-3" />}
+            count={selectedTimeWindowCellsCount}
+            label="time window cell"
+            colorClass="bg-purple-100 text-purple-700"
           />
         </h1>
         

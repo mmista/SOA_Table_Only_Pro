@@ -41,6 +41,10 @@ export const SOALegend: React.FC = () => {
               <span>Selected cell</span>
             </div>
             <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 bg-purple-200 border-2 border-purple-400 rounded"></div>
+              <span>Selected time window cell</span>
+            </div>
+            <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-white border border-gray-300 rounded-full flex items-center justify-center text-xs">
                 a
               </div>
@@ -57,6 +61,7 @@ export const SOALegend: React.FC = () => {
             <div>• Shift+click to select cell ranges</div>
             <div>• Right-click for context menu</div>
             <div>• Double-click merged cells to edit text</div>
+            <div>• Time window cells can be merged like activity cells</div>
             <div>• Drag timeline elements to reorganize</div>
           </div>
         </div>
