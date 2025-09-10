@@ -59,15 +59,12 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
     if (forceShowColorPicker) {
       setShowColorPicker(forceShowColorPicker);
     }
+  }, [forceShowColorPicker]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
-        if (onOpenColorPicker) {
-          onOpenColorPicker(null);
-        } else {
-          setShowColorPicker(false);
-        }
+        setShowColorPicker(false);
       }
     };
 
@@ -101,19 +98,13 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
 
   const handleColorChange = (newColor: string) => {
     onChangeColor(group.id, newColor);
-    if (onOpenColorPicker) {
-      onOpenColorPicker(null);
-    } else {
-      setShowColorPicker(false);
-    }
+    setShowColorPicker(false);
   };
 
   const handleOpenColorPicker = () => {
-    const newShowState = !showColorPicker;
-    if (onOpenColorPicker) {
-      onOpenColorPicker(newShowState ? group.id : null);
-    } else {
-      setShowColorPicker(newShowState);
+    setShowColorPicker(!showColorPicker);
+    if (onOpenColorPicker && !showColorPicker) {
+      onOpenColorPicker(group.id);
     }
   };
 
