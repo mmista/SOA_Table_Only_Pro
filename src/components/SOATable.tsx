@@ -889,6 +889,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
               <table className="w-full border-collapse">
                 <TimelineHeaderSection
                   data={data}
+                  headers={headerManagement.headers}
                  headers={headerManagement.headers}
                   dragState={dragState}
                   hoveredItems={hoveredItems}

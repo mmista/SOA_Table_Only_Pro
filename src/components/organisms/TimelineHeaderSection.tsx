@@ -7,6 +7,7 @@ import { useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManage
 
 interface TimelineHeaderSectionProps {
   data: SOAData;
+  headers: any[];
   dragState: {
     isDragging: boolean;
     draggedItem: any;
@@ -33,6 +34,7 @@ interface TimelineHeaderSectionProps {
 
 export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   data,
+  headers,
   dragState,
   hoveredItems,
   onDragStart,
@@ -60,6 +62,17 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     restoreAllHeaders,
     hasHiddenHeaders
   } = useTimelineHeaderManagement();
+
+  // Helper function to get header by type from centralized state
+  const getHeaderByType = (type: string) => {
+    return headers?.find(header => header.type === type);
+  };
+
+  // Check if a header type should be visible
+  const isHeaderVisible = (type: string) => {
+    const header = getHeaderByType(type);
+    return header ? header.isVisible : false;
+  };
 
   const renderDraggableCell = (
     title: string,
@@ -137,27 +150,27 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     }, 0);
   };
 
-  // Check if a header type should be visible
-  const isHeaderVisible = (type: string) => {
-    return visibleHeaders.some(header => header.type === type);
-  };
-
   return (
     <thead>
       {/* Period Row */}
       {isHeaderVisible('period') && (
         <tr>
-          <EditableHeaderLabel
-            id="period"
-            label={visibleHeaders.find(h => h.type === 'period')?.label || 'PERIOD'}
-            isEditing={editingHeaderId === 'period'}
-            isVisible={true}
-            onStartEdit={startEditingHeader}
-            onSaveLabel={saveHeaderLabel}
-            onCancelEdit={cancelEditingHeader}
-            onToggleVisibility={hideHeader}
-            className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]"
-          />
+          {(() => {
+            const header = getHeaderByType('period');
+            return (
+              <EditableHeaderLabel
+                id={header?.id || 'period'}
+                label={header?.label || 'PERIOD'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+                onStartEdit={startEditingHeader}
+                onSaveLabel={saveHeaderLabel}
+                onCancelEdit={cancelEditingHeader}
+                onToggleVisibility={hideHeader}
+                className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]"
+              />
+            );
+          })()}
           {data.periods.map(period => 
             renderDraggableCell(
               period.name,
@@ -174,16 +187,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
       {/* Cycle Row */}
       {isHeaderVisible('cycle') && (
         <tr>
-          <EditableHeaderLabel
-            id="cycle"
-            label={visibleHeaders.find(h => h.type === 'cycle')?.label || 'CYCLE'}
-            isEditing={editingHeaderId === 'cycle'}
-            isVisible={true}
-            onStartEdit={startEditingHeader}
-            onSaveLabel={saveHeaderLabel}
-            onCancelEdit={cancelEditingHeader}
-            onToggleVisibility={hideHeader}
-          />
+          {(() => {
+            const header = getHeaderByType('cycle');
+            return (
+              <EditableHeaderLabel
+                id={header?.id || 'cycle'}
+                label={header?.label || 'CYCLE'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+                onStartEdit={startEditingHeader}
+                onSaveLabel={saveHeaderLabel}
+                onCancelEdit={cancelEditingHeader}
+                onToggleVisibility={hideHeader}
+              />
+            );
+          })()}
           {data.periods.map(period =>
             period.cycles.map(cycle => 
               renderDraggableCell(
@@ -202,16 +220,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
       {/* Week Row */}
       {isHeaderVisible('week') && (
         <tr>
-          <EditableHeaderLabel
-            id="week"
-            label={visibleHeaders.find(h => h.type === 'week')?.label || 'WEEK'}
-            isEditing={editingHeaderId === 'week'}
-            isVisible={true}
-            onStartEdit={startEditingHeader}
-            onSaveLabel={saveHeaderLabel}
-            onCancelEdit={cancelEditingHeader}
-            onToggleVisibility={hideHeader}
-          />
+          {(() => {
+            const header = getHeaderByType('week');
+            return (
+              <EditableHeaderLabel
+                id={header?.id || 'week'}
+                label={header?.label || 'WEEK'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+                onStartEdit={startEditingHeader}
+                onSaveLabel={saveHeaderLabel}
+                onCancelEdit={cancelEditingHeader}
+                onToggleVisibility={hideHeader}
+              />
+            );
+          })()}
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
@@ -232,16 +255,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
       {/* Day Row */}
       {isHeaderVisible('day') && (
         <tr>
-          <EditableHeaderLabel
-            id="day"
-            label={visibleHeaders.find(h => h.type === 'day')?.label || 'DAY'}
-            isEditing={editingHeaderId === 'day'}
-            isVisible={true}
-            onStartEdit={startEditingHeader}
-            onSaveLabel={saveHeaderLabel}
-            onCancelEdit={cancelEditingHeader}
-            onToggleVisibility={hideHeader}
-          />
+          {(() => {
+            const header = getHeaderByType('day');
+            return (
+              <EditableHeaderLabel
+                id={header?.id || 'day'}
+                label={header?.label || 'DAY'}
+                isEditing={editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+                onStartEdit={startEditingHeader}
+                onSaveLabel={saveHeaderLabel}
+                onCancelEdit={cancelEditingHeader}
+                onToggleVisibility={hideHeader}
+              />
+            );
+          })()}
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
