@@ -10,6 +10,7 @@ interface VisitLabelCellProps {
   linkedVisitNumbers: number[];
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  onOpenVisitLinkPanel: (dayId: string) => void;
 }
 
 export const VisitLabelCell: React.FC<VisitLabelCellProps> = ({
@@ -20,7 +21,8 @@ export const VisitLabelCell: React.FC<VisitLabelCellProps> = ({
   linkInfo,
   linkedVisitNumbers,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
+  onOpenVisitLinkPanel
 }) => {
   const getTooltipText = () => {
     if (!isLinked) return undefined;
@@ -38,6 +40,7 @@ export const VisitLabelCell: React.FC<VisitLabelCellProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       title={getTooltipText()}
+      onClick={() => onOpenVisitLinkPanel(dayId)}
     >
       <div className="flex items-center justify-center space-x-1">
         <span>V{visitNumber}</span>

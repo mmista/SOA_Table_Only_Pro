@@ -19,6 +19,7 @@ interface StaticRowsSectionProps {
   shouldHighlightVisit: (dayId: string) => boolean;
   handleVisitHover: (dayId: string | null) => void;
   onStaticCellClick: (dayId: string, content: string, type: EditableItemType) => void;
+  onOpenVisitLinkPanel: (dayId: string) => void;
 }
 
 export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
@@ -33,7 +34,8 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   getVisitLinkInfo,
   shouldHighlightVisit,
   handleVisitHover,
-  onStaticCellClick
+  onStaticCellClick,
+  onOpenVisitLinkPanel
 }) => {
 
   // Helper function to get cell value by dayId
@@ -237,6 +239,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                       linkedVisitNumbers={linkedVisitNumbers}
                       onMouseEnter={() => handleVisitHover(day.id)}
                       onMouseLeave={() => handleVisitHover(null)}
+                      onOpenVisitLinkPanel={onOpenVisitLinkPanel}
                     />
                   );
                 })
