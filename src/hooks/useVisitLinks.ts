@@ -6,7 +6,7 @@ interface VisitLinkState {
   hoveredActivityCell: { visitId: string; activityId: string } | null;
 }
 
-export const useVisitLinks = (data: SOAData) => {
+export const useVisitLinks = (data: SOAData, onDataChange?: (data: SOAData) => void) => {
   const [linkState, setLinkState] = useState<VisitLinkState>({
     hoveredVisit: null,
     hoveredActivityCell: null
@@ -91,6 +91,63 @@ export const useVisitLinks = (data: SOAData) => {
     return false;
   }, [linkState.hoveredActivityCell, isVisitLinked, getLinkedVisits]);
 
+  // Update visit links
+  const updateVisitLinks = useCallback((currentDayId: string, selectedLinkedDayIds: string[], linkGroupName?: string) => {
+    if (!onDataChange) return;
+
+    const newData = { ...data };
+    if (!newData.visitLinks) newData.visitLinks = [];
+
+    // Remove the currentDayId from any existing link groups
+    newData.visitLinks = newData.visitLinks.filter(link => {
+      link.visitIds = link.visitIds.filter(id => id !== currentDayId);
+      return link.visitIds.length > 1; // Remove groups with only one or no visits
+    });
+
+    // If we have more than one selected day, create or update a link group
+    if (selectedLinkedDayIds.length > 1) {
+      const newLinkGroup: VisitLink = {
+        id: `link-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        visitIds: selectedLinkedDayIds,
+        name: linkGroupName
+      };
+      newData.visitLinks.push(newLinkGroup);
+    }
+
+    onDataChange(newData);
+  }, [data, onDataChange]);
+
+  // Unlink all visits for a specific day
+  const unlinkAllVisits = useCallback((dayId: string) => {
+    if (!onDataChange) return;
+
+    const newData = { ...data };
+    if (!newData.visitLinks) return;
+
+    // Remove the dayId from all link groups
+    newData.visitLinks = newData.visitLinks.filter(link => {
+      link.visitIds = link.visitIds.filter(id => id !== dayId);
+      return link.visitIds.length > 1; // Remove groups with only one or no visits
+    });
+
+    onDataChange(newData);
+  }, [data, onDataChange]);
+
+  // Clean up visit links after structural changes (e.g., day deletion)
+  const cleanUpVisitLinks = useCallback((allCurrentDayIds: string[]) => {
+    if (!onDataChange) return;
+
+    const newData = { ...data };
+    if (!newData.visitLinks) return;
+
+    // Remove any dayIds that no longer exist and filter out invalid groups
+    newData.visitLinks = newData.visitLinks.filter(link => {
+      link.visitIds = link.visitIds.filter(id => allCurrentDayIds.includes(id));
+      return link.visitIds.length > 1; // Remove groups with only one or no visits
+    });
+
+    onDataChange(newData);
+  }, [data, onDataChange]);
   return {
     isVisitLinked,
     getLinkedVisits,
@@ -99,6 +156,9 @@ export const useVisitLinks = (data: SOAData) => {
     handleActivityCellHover,
     shouldHighlightVisit,
     shouldHighlightActivityCell,
+    updateVisitLinks,
+    unlinkAllVisits,
+    cleanUpVisitLinks,
     hoveredVisit: linkState.hoveredVisit,
     hoveredActivityCell: linkState.hoveredActivityCell
   };

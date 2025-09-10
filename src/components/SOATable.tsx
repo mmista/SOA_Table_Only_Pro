@@ -10,6 +10,7 @@ import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
 import { StaticRowsSection } from './organisms/StaticRowsSection';
 import { ActivityRowsSection } from './organisms/ActivityRowsSection';
+import { VisitLinkPanel } from './VisitLinkPanel';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { useVisitLinks } from '../hooks/useVisitLinks';
 import { useComments } from '../hooks/useComments';
@@ -24,6 +25,12 @@ interface HoverState {
   type: EditableItemType;
   id: string;
   side: 'left' | 'right';
+}
+
+// Define the state for the VisitLinkPanel
+interface VisitLinkPanelState {
+  isOpen: boolean;
+  dayId: string | null;
 }
 
 export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerManagement }) => {
@@ -56,6 +63,9 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     y: 0,
     clickedCell: null
   });
+  
+  // State for VisitLinkPanel
+  const [visitLinkPanelState, setVisitLinkPanelState] = useState<VisitLinkPanelState>({ isOpen: false, dayId: null });
   
   // Comments hook
   const {
@@ -117,7 +127,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     handleActivityCellHover,
     shouldHighlightVisit,
     shouldHighlightActivityCell
-  } = useVisitLinks(data);
+    updateVisitLinks,
+    unlinkAllVisits,
+    cleanUpVisitLinks
+  } = useVisitLinks(data, onDataChange);
 
   // Show success animation when a move completes
   const showSuccessAnimation = () => {
@@ -435,6 +448,29 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
 
   const handleCellClick = (item: any, type: EditableItemType) => {
     setEditContext({ item, type });
+  };
+
+  // Function to open the VisitLinkPanel
+  const openVisitLinkPanel = (dayId: string) => {
+    setVisitLinkPanelState({ isOpen: true, dayId });
+  };
+
+  // Function to close the VisitLinkPanel
+  const closeVisitLinkPanel = () => {
+    setVisitLinkPanelState({ isOpen: false, dayId: null });
+  };
+
+  // Helper to get all day objects for the VisitLinkPanel
+  const getAllDayObjects = (): Day[] => {
+    const allDayObjects: Day[] = [];
+    data.periods.forEach(period => {
+      period.cycles.forEach(cycle => {
+        cycle.weeks.forEach(week => {
+          allDayObjects.push(...week.days);
+        });
+      });
+    });
+    return allDayObjects;
   };
 
   // Enhanced drop handler with success animation
@@ -970,6 +1006,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                     shouldHighlightVisit={shouldHighlightVisit}
                     handleVisitHover={handleVisitHover}
                     onStaticCellClick={handleStaticCellClick}
+                    onOpenVisitLinkPanel={openVisitLinkPanel}
                   />
                   
                   <ActivityRowsSection
@@ -1095,6 +1132,17 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         onKeepEmpty={handleKeepEmptyGroup}
         onDelete={handleDeleteEmptyGroup}
         onClose={closeEmptyGroupModal}
+      />
+
+      {/* Visit Link Panel */}
+      <VisitLinkPanel
+        isOpen={visitLinkPanelState.isOpen}
+        onClose={closeVisitLinkPanel}
+        currentDayId={visitLinkPanelState.dayId || ''}
+        allDays={getAllDayObjects()}
+        existingVisitLinks={data.visitLinks || []}
+        onSaveLinks={updateVisitLinks}
+        onUnlinkAll={unlinkAllVisits}
       />
     </>
   );
