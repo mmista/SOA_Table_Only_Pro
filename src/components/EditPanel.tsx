@@ -17,18 +17,35 @@ export const EditPanel: React.FC<EditPanelProps> = ({
 }) => {
   const [name, setName] = useState(context.item.name);
   const [duration, setDuration] = useState(context.item.duration || '');
+  const [cellValue, setCellValue] = useState('');
 
   useEffect(() => {
-    setName(context.item.name);
-    setDuration(context.item.duration || '');
+    if (context.type === 'time-relative-cell' || context.type === 'time-window-cell' || context.type === 'time-of-day-cell') {
+      setCellValue((context.item as any).value?.toString() || '');
+    } else {
+      setName((context.item as any).name || '');
+      setDuration((context.item as any).duration || '');
+    }
   }, [context.item]);
 
   const handleSave = () => {
-    onSave({
-      ...context.item,
-      name,
-      duration: duration ? Number(duration) : undefined
-    });
+    if (context.type === 'time-relative-cell' || context.type === 'time-window-cell') {
+      onSave({
+        ...context.item,
+        value: Number(cellValue) || 0
+      });
+    } else if (context.type === 'time-of-day-cell') {
+      onSave({
+        ...context.item,
+        value: cellValue
+      });
+    } else {
+      onSave({
+        ...context.item,
+        name,
+        duration: duration ? Number(duration) : undefined
+      });
+    }
   };
 
   const getTypeLabel = () => {
@@ -37,6 +54,9 @@ export const EditPanel: React.FC<EditPanelProps> = ({
       case 'cycle': return 'Cycle';
       case 'week': return 'Week';
       case 'day': return 'Day';
+      case 'time-relative-cell': return 'Time Relative';
+      case 'time-window-cell': return 'Time Window';
+      case 'time-of-day-cell': return 'Time of Day';
       default: return 'Item';
     }
   };
@@ -47,6 +67,9 @@ export const EditPanel: React.FC<EditPanelProps> = ({
       case 'cycle': return 'text-green-600 bg-green-50';
       case 'week': return 'text-orange-600 bg-orange-50';
       case 'day': return 'text-purple-600 bg-purple-50';
+      case 'time-relative-cell': return 'text-indigo-600 bg-indigo-50';
+      case 'time-window-cell': return 'text-pink-600 bg-pink-50';
+      case 'time-of-day-cell': return 'text-teal-600 bg-teal-50';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -58,6 +81,97 @@ export const EditPanel: React.FC<EditPanelProps> = ({
       case 'week': return 'days';
       case 'day': return 'hours';
       default: return 'units';
+    }
+  };
+
+  const renderInput = () => {
+    if (context.type === 'time-relative-cell') {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Hours
+          </label>
+          <input
+            type="number"
+            value={cellValue}
+            onChange={(e) => setCellValue(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter hours"
+            min="0"
+          />
+        </div>
+      );
+    } else if (context.type === 'time-window-cell') {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Time Window (Hours)
+          </label>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-500">±</span>
+            <input
+              type="number"
+              value={cellValue}
+              onChange={(e) => setCellValue(e.target.value)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter hours"
+              min="0"
+            />
+            <span className="text-gray-500">h</span>
+          </div>
+        </div>
+      );
+    } else if (context.type === 'time-of-day-cell') {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Time of Day
+          </label>
+          <select
+            value={cellValue}
+            onChange={(e) => setCellValue(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="Morning">Morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Evening">Evening</option>
+          </select>
+        </div>
+      );
+    } else {
+      return (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {getTypeLabel()} Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={`Enter ${getTypeLabel().toLowerCase()} name`}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Duration ({getDurationUnit()})
+            </label>
+            <input
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={`Duration in ${getDurationUnit()}`}
+              min="1"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Optional: Specify the duration for this {getTypeLabel().toLowerCase()}
+            </p>
+          </div>
+        </>
+      );
     }
   };
 
@@ -81,43 +195,15 @@ export const EditPanel: React.FC<EditPanelProps> = ({
       </div>
 
       <div className="flex-1 p-4 space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            {getTypeLabel()} Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder={`Enter ${getTypeLabel().toLowerCase()} name`}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Duration ({getDurationUnit()})
-          </label>
-          <input
-            type="number"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder={`Duration in ${getDurationUnit()}`}
-            min="1"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Optional: Specify the duration for this {getTypeLabel().toLowerCase()}
-          </p>
-        </div>
+        {renderInput()}
 
         <div className="bg-gray-50 p-3 rounded-md">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Properties</h3>
           <div className="space-y-1 text-xs text-gray-600">
             <div>ID: <span className="font-mono">{context.item.id}</span></div>
             <div>Type: <span className="capitalize">{context.type}</span></div>
-            {context.item.duration && (
-              <div>Current Duration: {context.item.duration} {getDurationUnit()}</div>
+            {(context.item as any).duration && (
+              <div>Current Duration: {(context.item as any).duration} {getDurationUnit()}</div>
             )}
           </div>
         </div>
@@ -132,12 +218,14 @@ export const EditPanel: React.FC<EditPanelProps> = ({
             <Save className="w-4 h-4" />
             <span>Save Changes</span>
           </button>
-          <button
-            onClick={onDelete}
-            className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {(context.type === 'period' || context.type === 'cycle' || context.type === 'week' || context.type === 'day') && (
+            <button
+              onClick={onDelete}
+              className="flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <button
           onClick={onCancel}

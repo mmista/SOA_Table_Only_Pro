@@ -1,5 +1,5 @@
 import React from 'react';
-import { SOAData } from '../../types/soa';
+import { SOAData, TimeRelativeCell, TimeWindowCell, TimeOfDayCell, EditableItemType } from '../../types/soa';
 import { TimelineHeaderConfig, useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 import { StaticTableCell } from '../molecules/StaticTableCell';
 import { VisitLabelCell } from '../molecules/VisitLabelCell';
@@ -9,24 +9,38 @@ import { HiddenHeadersContainer } from '../molecules/HiddenHeadersContainer';
 interface StaticRowsSectionProps {
   data: SOAData;
   headerManagement: ReturnType<typeof useTimelineHeaderManagement>;
+  timeRelativeCells: TimeRelativeCell[];
+  timeWindowCells: TimeWindowCell[];
+  timeOfDayCells: TimeOfDayCell[];
   totalColumns: number;
   isVisitLinked: (dayId: string) => boolean;
   getLinkedVisits: (dayId: string) => string[];
   getVisitLinkInfo: (dayId: string) => { name?: string } | null;
   shouldHighlightVisit: (dayId: string) => boolean;
   handleVisitHover: (dayId: string | null) => void;
+  onStaticCellClick: (dayId: string, content: string, type: EditableItemType) => void;
 }
 
 export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   data,
   headerManagement,
+  timeRelativeCells,
+  timeWindowCells,
+  timeOfDayCells,
   totalColumns,
   isVisitLinked,
   getLinkedVisits,
   getVisitLinkInfo,
   shouldHighlightVisit,
-  handleVisitHover
+  handleVisitHover,
+  onStaticCellClick
 }) => {
+
+  // Helper function to get cell value by dayId
+  const getCellValue = (cells: any[], dayId: string, defaultValue: string) => {
+    const cell = cells.find(c => c.dayId === dayId);
+    return cell ? cell.value : defaultValue;
+  };
 
   // Calculate visit number for a given day
   const calculateVisitNumber = (targetDayId: string): number => {
@@ -87,13 +101,18 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
-                week.days.map((day) => (
-                  <StaticTableCell
-                    key={`time-relative-${day.id}`}
-                    content="24"
-                    dayId={day.id}
-                  />
-                ))
+                week.days.map((day) => {
+                  const value = getCellValue(timeRelativeCells, day.id, 24);
+                  return (
+                    <StaticTableCell
+                      key={`time-relative-${day.id}`}
+                      content={value.toString()}
+                      dayId={day.id}
+                      type="time-relative-cell"
+                      onClick={onStaticCellClick}
+                    />
+                  );
+                })
               )
             )
           )}
@@ -121,13 +140,18 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
-                week.days.map((day, dayIndex) => (
-                  <StaticTableCell
-                    key={`window-${day.id}`}
-                    content={dayIndex % 3 === 0 ? '±24h' : dayIndex % 3 === 1 ? '±2h' : '±4h'}
-                    dayId={day.id}
-                  />
-                ))
+                week.days.map((day) => {
+                  const value = getCellValue(timeWindowCells, day.id, 24);
+                  return (
+                    <StaticTableCell
+                      key={`window-${day.id}`}
+                      content={`±${value}h`}
+                      dayId={day.id}
+                      type="time-window-cell"
+                      onClick={onStaticCellClick}
+                    />
+                  );
+                })
               )
             )
           )}
@@ -155,13 +179,18 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
           {data.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
-                week.days.map((day, dayIndex) => (
-                  <StaticTableCell
-                    key={`time-${day.id}`}
-                    content={dayIndex % 2 === 0 ? 'Morning' : 'Afternoon'}
-                    dayId={day.id}
-                  />
-                ))
+                week.days.map((day) => {
+                  const value = getCellValue(timeOfDayCells, day.id, 'Morning');
+                  return (
+                    <StaticTableCell
+                      key={`time-${day.id}`}
+                      content={value}
+                      dayId={day.id}
+                      type="time-of-day-cell"
+                      onClick={onStaticCellClick}
+                    />
+                  );
+                })
               )
             )
           )}
