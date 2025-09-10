@@ -23,7 +23,7 @@ const DEFAULT_HEADERS: TimelineHeaderConfig[] = [
   { id: 'day', label: 'DAY', isVisible: true, originalPosition: 3, type: 'day' },
   { id: 'time-relative', label: 'TIME RELATIVE (H)', isVisible: true, originalPosition: 4, type: 'time-relative' },
   { id: 'time-of-day', label: 'TIME OF DAY', isVisible: true, originalPosition: 5, type: 'time-of-day' },
-  { id: 'allowed-window', label: 'ALLOWED WINDOW', isVisible: true, originalPosition: 6, type: 'allowed-window' },
+  { id: 'allowed-window', label: 'TIME WINDOW (H)', isVisible: true, originalPosition: 6, type: 'allowed-window' },
   { id: 'visit', label: 'VISIT LABEL', isVisible: true, originalPosition: 7, type: 'visit' }
 ];
 
