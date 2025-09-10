@@ -34,7 +34,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   getVisitLinkInfo,
   shouldHighlightVisit,
   handleVisitHover,
-  onStaticCellClick
+  onStaticCellClick,
   onOpenVisitLinkPanel
 }) => {
 
