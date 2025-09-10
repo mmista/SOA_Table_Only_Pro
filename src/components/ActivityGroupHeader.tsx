@@ -64,7 +64,11 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
-        setShowColorPicker(false);
+        if (onOpenColorPicker) {
+          onOpenColorPicker(null);
+        } else {
+          setShowColorPicker(false);
+        }
       }
     };
 
@@ -72,7 +76,7 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showColorPicker]);
+  }, [showColorPicker, onOpenColorPicker]);
 
   const handleSaveName = () => {
     if (editName.trim() && editName.trim() !== group.name) {
