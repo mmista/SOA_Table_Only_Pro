@@ -124,7 +124,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                 week.days.map((day, dayIndex) => (
                   <StaticTableCell
                     key={`window-${day.id}`}
-                    content={dayIndex % 3 === 0 ? '±1d' : dayIndex % 3 === 1 ? '±2h' : '±4h'}
+                    content={dayIndex % 3 === 0 ? '±24h' : dayIndex % 3 === 1 ? '±2h' : '±4h'}
                     dayId={day.id}
                   />
                 ))
