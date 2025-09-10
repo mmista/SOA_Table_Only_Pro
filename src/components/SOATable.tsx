@@ -7,6 +7,7 @@ import { CommentModal } from './CommentModal';
 import { ActivityCellContextMenu } from './ActivityCellContextMenu';
 import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
 import { ActivityHeaderContextMenu } from './ActivityHeaderContextMenu';
+import { ActivityGroupHeaderContextMenu } from './ActivityGroupHeaderContextMenu';
 import { ActivityGroup } from '../types/soa';
 import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
@@ -50,6 +51,13 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     position: { x: number; y: number };
     activityId: string;
     dayId: string;
+  
+  const [groupHeaderContextMenu, setGroupHeaderContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    groupId: string | null;
+    groupName: string;
+  }>({ isOpen: false, position: { x: 0, y: 0 }, groupId: null, groupName: '' });
   } | null>(null);
   
   // New states for cell selection and context menu
@@ -401,6 +409,17 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       x: e.clientX,
       y: e.clientY,
       clickedActivityId: activityId
+    });
+  };
+
+  const handleActivityGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
+    e.preventDefault();
+    const group = activityGroups.find(g => g.id === groupId);
+    setGroupHeaderContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      groupId: groupId,
+      groupName: group?.name || 'Unknown Group'
     });
   };
 
