@@ -51,7 +51,13 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     position: { x: number, y: number },
     activityId: string,
     dayId: string,
-  
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    activityId: '',
+    dayId: ''
+  });
+
   const [groupHeaderContextMenu, setGroupHeaderContextMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
