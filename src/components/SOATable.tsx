@@ -126,7 +126,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     handleVisitHover,
     handleActivityCellHover,
     shouldHighlightVisit,
-    shouldHighlightActivityCell
+    shouldHighlightActivityCell,
     updateVisitLinks,
     unlinkAllVisits,
     cleanUpVisitLinks

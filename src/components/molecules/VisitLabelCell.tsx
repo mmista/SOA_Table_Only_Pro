@@ -21,7 +21,7 @@ export const VisitLabelCell: React.FC<VisitLabelCellProps> = ({
   linkInfo,
   linkedVisitNumbers,
   onMouseEnter,
-  onMouseLeave
+  onMouseLeave,
   onOpenVisitLinkPanel
 }) => {
   const getTooltipText = () => {
