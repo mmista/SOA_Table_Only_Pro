@@ -1,6 +1,9 @@
 import React from 'react';
 import { SOAData, EditableItemType } from '../../types/soa';
 import { DraggableCell } from '../DraggableCell';
+import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
+import { HiddenHeadersContainer } from '../molecules/HiddenHeadersContainer';
+import { useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 
 interface TimelineHeaderSectionProps {
   data: SOAData;
@@ -43,6 +46,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   hasComment,
   onCommentClick
 }) => {
+  const {
+    visibleHeaders,
+    hiddenHeaders,
+    editingHeaderId,
+    isHiddenContainerExpanded,
+    startEditingHeader,
+    saveHeaderLabel,
+    cancelEditingHeader,
+    hideHeader,
+    showHeader,
+    toggleHiddenContainer,
+    restoreAllHeaders,
+    hasHiddenHeaders
+  } = useTimelineHeaderManagement();
+
   const renderDraggableCell = (
     title: string,
     colSpan: number,
@@ -108,87 +126,153 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     }, 0);
   };
 
+  // Calculate total columns for the hidden container
+  const getTotalColumns = () => {
+    return data.periods.reduce((total, period) => {
+      return total + period.cycles.reduce((cycleTotal, cycle) => {
+        return cycleTotal + cycle.weeks.reduce((weekTotal, week) => {
+          return weekTotal + week.days.length;
+        }, 0);
+      }, 0);
+    }, 0);
+  };
+
+  // Check if a header type should be visible
+  const isHeaderVisible = (type: string) => {
+    return visibleHeaders.some(header => header.type === type);
+  };
+
   return (
     <thead>
       {/* Period Row */}
-      <tr>
-        <th className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]">
-          <span className="font-normal text-xs text-gray-500 uppercase tracking-wider">PERIOD</span>
-        </th>
-        {data.periods.map(period => 
-          renderDraggableCell(
-            period.name,
-            getPeriodColspan(period),
-            'period',
-            period,
-            'bg-blue-100',
-            `${period.duration || getPeriodColspan(period)} days`
-          )
-        )}
-      </tr>
+      {isHeaderVisible('period') && (
+        <tr>
+          <EditableHeaderLabel
+            id="period"
+            label={visibleHeaders.find(h => h.type === 'period')?.label || 'PERIOD'}
+            isEditing={editingHeaderId === 'period'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+            className="sticky left-0 border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold w-48 z-[15]"
+          />
+          {data.periods.map(period => 
+            renderDraggableCell(
+              period.name,
+              getPeriodColspan(period),
+              'period',
+              period,
+              'bg-blue-100',
+              `${period.duration || getPeriodColspan(period)} days`
+            )
+          )}
+        </tr>
+      )}
 
       {/* Cycle Row */}
-      <tr>
-        <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-          CYCLE
-        </td>
-        {data.periods.map(period =>
-          period.cycles.map(cycle => 
-            renderDraggableCell(
-              cycle.name,
-              getCycleColspan(cycle),
-              'cycle',
-              cycle,
-              'bg-green-100',
-              `${cycle.duration || getCycleColspan(cycle)} days`
-            )
-          )
-        )}
-      </tr>
-
-      {/* Week Row */}
-      <tr>
-        <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-          WEEK
-        </td>
-        {data.periods.map(period =>
-          period.cycles.map(cycle =>
-            cycle.weeks.map(week =>
+      {isHeaderVisible('cycle') && (
+        <tr>
+          <EditableHeaderLabel
+            id="cycle"
+            label={visibleHeaders.find(h => h.type === 'cycle')?.label || 'CYCLE'}
+            isEditing={editingHeaderId === 'cycle'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+          />
+          {data.periods.map(period =>
+            period.cycles.map(cycle => 
               renderDraggableCell(
-                week.name,
-                week.days.length,
-                'week',
-                week,
-                'bg-orange-100',
-                `${week.duration || 7} days`
+                cycle.name,
+                getCycleColspan(cycle),
+                'cycle',
+                cycle,
+                'bg-green-100',
+                `${cycle.duration || getCycleColspan(cycle)} days`
               )
             )
           )
-        )}
-      </tr>
+          )}
+        </tr>
+      )}
 
-      {/* Day Row */}
-      <tr>
-        <td className="sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]">
-          DAY
-        </td>
-        {data.periods.map(period =>
-          period.cycles.map(cycle =>
-            cycle.weeks.map(week =>
-              week.days.map(day =>
+      {/* Week Row */}
+      {isHeaderVisible('week') && (
+        <tr>
+          <EditableHeaderLabel
+            id="week"
+            label={visibleHeaders.find(h => h.type === 'week')?.label || 'WEEK'}
+            isEditing={editingHeaderId === 'week'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+          />
+          {data.periods.map(period =>
+            period.cycles.map(cycle =>
+              cycle.weeks.map(week =>
                 renderDraggableCell(
-                  day.name,
-                  1,
-                  'day',
-                  day,
-                  'bg-purple-100',
-                  undefined
+                  week.name,
+                  week.days.length,
+                  'week',
+                  week,
+                  'bg-orange-100',
+                  `${week.duration || 7} days`
                 )
               )
             )
-          )
-        )}
-      </tr>
+          )}
+        </tr>
+      )}
+
+      {/* Day Row */}
+      {isHeaderVisible('day') && (
+        <tr>
+          <EditableHeaderLabel
+            id="day"
+            label={visibleHeaders.find(h => h.type === 'day')?.label || 'DAY'}
+            isEditing={editingHeaderId === 'day'}
+            isVisible={true}
+            onStartEdit={startEditingHeader}
+            onSaveLabel={saveHeaderLabel}
+            onCancelEdit={cancelEditingHeader}
+            onToggleVisibility={hideHeader}
+          />
+          {data.periods.map(period =>
+            period.cycles.map(cycle =>
+              cycle.weeks.map(week =>
+                week.days.map(day =>
+                  renderDraggableCell(
+                    day.name,
+                    1,
+                    'day',
+                    day,
+                    'bg-purple-100',
+                    undefined
+                  )
+                )
+              )
+            )
+          )}
+        </tr>
+      )}
+      
+      {/* Hidden Headers Container */}
+      {hasHiddenHeaders && (
+        <HiddenHeadersContainer
+          hiddenHeaders={hiddenHeaders}
+          isExpanded={isHiddenContainerExpanded}
+          onToggleExpanded={toggleHiddenContainer}
+          onRestoreHeader={showHeader}
+          onRestoreAll={restoreAllHeaders}
+          totalColumns={getTotalColumns()}
+        />
+      )}
     </thead>
   );
 };
