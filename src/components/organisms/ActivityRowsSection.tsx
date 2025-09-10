@@ -158,6 +158,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
             onRename={onRenameGroup}
             onChangeColor={onChangeGroupColor}
             onUngroup={onUngroupGroup}
+            onRightClick={onGroupHeaderRightClick}
           />
           {!collapsedGroups.has(group.id) && groupActivities.map(renderActivityRow)}
         </React.Fragment>

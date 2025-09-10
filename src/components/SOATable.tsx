@@ -1544,6 +1544,18 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         onClose={closeEmptyGroupModal}
       />
 
+      {/* Group Header Context Menu */}
+      <ActivityGroupHeaderContextMenu
+        isOpen={groupHeaderContextMenu.isOpen}
+        position={groupHeaderContextMenu.position}
+        groupId={groupHeaderContextMenu.groupId}
+        groupName={groupHeaderContextMenu.groupName}
+        onUngroup={handleUngroupGroup}
+        onRename={handleRenameGroup}
+        onChangeColor={handleChangeGroupColor}
+        onClose={() => setGroupHeaderContextMenu(prev => ({ ...prev, isOpen: false }))}
+      />
+
       {/* Visit Link Panel */}
       <VisitLinkPanel
         isOpen={visitLinkPanelState.isOpen}
