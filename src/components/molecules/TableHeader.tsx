@@ -1,10 +1,11 @@
 import React from 'react';
-import { Move, MessageSquare, CheckCircle, Undo2 } from 'lucide-react';
+import { MessageSquare, CheckCircle, Undo2 } from 'lucide-react';
 import { StatsBadge } from '../atoms/StatsBadge';
 import { DragIndicator } from '../atoms/DragIndicator';
 import { SuccessIndicator } from '../atoms/SuccessIndicator';
 
 interface TableHeaderProps {
+  title?: string;
   totalDays: number;
   commentStats: { total: number };
   selectedCellsCount: number;
@@ -20,6 +21,7 @@ interface TableHeaderProps {
 }
 
 export const TableHeader: React.FC<TableHeaderProps> = ({
+  title = "Schedule of Activities (SOA) Editor",
   totalDays,
   commentStats,
   selectedCellsCount,
@@ -33,8 +35,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
     <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
       <div>
         <h1 className="text-xl font-bold flex items-center space-x-2">
-          <Move className="w-5 h-5" />
-          <span>Schedule of Activities (SOA) Editor</span>
+          <span>{title}</span>
           
           <StatsBadge
             icon={<MessageSquare className="w-3 h-3" />}
