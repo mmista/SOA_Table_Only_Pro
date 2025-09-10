@@ -66,6 +66,74 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
 
   return (
     <>
+      {/* Time Relative Row */}
+      {isHeaderVisible('time-relative') && (
+        <tr>
+          {(() => {
+            const header = getHeaderByType('time-relative');
+            return (
+          <EditableHeaderLabel
+                id={header?.id || 'time-relative'}
+                label={header?.label || 'TIME RELATIVE (H)'}
+                isEditing={headerManagement.editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+            onStartEdit={headerManagement.startEditingHeader}
+            onSaveLabel={headerManagement.saveHeaderLabel}
+            onCancelEdit={headerManagement.cancelEditingHeader}
+            onToggleVisibility={headerManagement.hideHeader}
+          />
+            );
+          })()}
+          {data.periods.map(period =>
+            period.cycles.map(cycle =>
+              cycle.weeks.map(week =>
+                week.days.map((day) => (
+                  <StaticTableCell
+                    key={`time-relative-${day.id}`}
+                    content="24"
+                    dayId={day.id}
+                  />
+                ))
+              )
+            )
+          )}
+        </tr>
+      )}
+
+      {/* Allowed Window Row */}
+      {isHeaderVisible('allowed-window') && (
+        <tr>
+          {(() => {
+            const header = getHeaderByType('allowed-window');
+            return (
+              <EditableHeaderLabel
+                id={header?.id || 'allowed-window'}
+                label={header?.label || 'TIME WINDOW (H)'}
+                isEditing={headerManagement.editingHeaderId === header?.id}
+                isVisible={header?.isVisible || false}
+                onStartEdit={headerManagement.startEditingHeader}
+                onSaveLabel={headerManagement.saveHeaderLabel}
+                onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleVisibility={headerManagement.hideHeader}
+              />
+            );
+          })()}
+          {data.periods.map(period =>
+            period.cycles.map(cycle =>
+              cycle.weeks.map(week =>
+                week.days.map((day, dayIndex) => (
+                  <StaticTableCell
+                    key={`window-${day.id}`}
+                    content={dayIndex % 3 === 0 ? '±1d' : dayIndex % 3 === 1 ? '±2h' : '±4h'}
+                    dayId={day.id}
+                  />
+                ))
+              )
+            )
+          )}
+        </tr>
+      )}
+
       {/* Time of Day Row */}
       {isHeaderVisible('time-of-day') && (
         <tr>
@@ -100,39 +168,6 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         </tr>
       )}
 
-      {/* Allowed Window Row */}
-      {isHeaderVisible('allowed-window') && (
-        <tr>
-          {(() => {
-            const header = getHeaderByType('allowed-window');
-            return (
-          <EditableHeaderLabel
-                id={header?.id || 'allowed-window'}
-                label={header?.label || 'ALLOWED WINDOW'}
-                isEditing={headerManagement.editingHeaderId === header?.id}
-                isVisible={header?.isVisible || false}
-            onStartEdit={headerManagement.startEditingHeader}
-            onSaveLabel={headerManagement.saveHeaderLabel}
-            onCancelEdit={headerManagement.cancelEditingHeader}
-            onToggleVisibility={headerManagement.hideHeader}
-          />
-            );
-          })()}
-          {data.periods.map(period =>
-            period.cycles.map(cycle =>
-              cycle.weeks.map(week =>
-                week.days.map((day, dayIndex) => (
-                  <StaticTableCell
-                    key={`window-${day.id}`}
-                    content={dayIndex % 3 === 0 ? '±1d' : dayIndex % 3 === 1 ? '±2h' : '±4h'}
-                    dayId={day.id}
-                  />
-                ))
-              )
-            )
-          )}
-        </tr>
-      )}
 
       {/* Visit Label Row */}
       {isHeaderVisible('visit') && (
