@@ -913,6 +913,13 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                 <tbody>
                   <StaticRowsSection
                     data={data}
+                    headers={headerManagement.headers}
+                    visibleHeaders={headerManagement.visibleHeaders}
+                    editingHeaderId={headerManagement.editingHeaderId}
+                    startEditingHeader={headerManagement.startEditingHeader}
+                    saveHeaderLabel={headerManagement.saveHeaderLabel}
+                    cancelEditingHeader={headerManagement.cancelEditingHeader}
+                    hideHeader={headerManagement.hideHeader}
                     isVisitLinked={isVisitLinked}
                     getLinkedVisits={getLinkedVisits}
                     getVisitLinkInfo={getVisitLinkInfo}
