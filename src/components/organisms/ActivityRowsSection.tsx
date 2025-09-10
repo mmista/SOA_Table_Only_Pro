@@ -83,6 +83,8 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     groupId: null,
   });
 
+  const [openColorPickerGroupId, setOpenColorPickerGroupId] = React.useState<string | null>(null);
+
   const handleGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
     e.preventDefault();
     setGroupHeaderContextMenu({
@@ -94,6 +96,21 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
 
   const handleCloseGroupHeaderContextMenu = () => {
     setGroupHeaderContextMenu(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleOpenGroupColorPicker = (groupId: string) => {
+    setOpenColorPickerGroupId(groupId);
+    handleCloseGroupHeaderContextMenu();
+    
+    // Reset the color picker state after a short delay to prevent it from staying open
+    setTimeout(() => {
+      setOpenColorPickerGroupId(null);
+    }, 100);
+  };
+
+  const handleGroupColorPickerOpen = (groupId: string) => {
+    // This is called when the color picker is opened directly from the header
+    // We don't need to do anything special here, just acknowledge it
   };
 
   // Organize activities by groups
@@ -178,9 +195,11 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
             group={group}
             totalColumns={getTotalDays()}
             isCollapsed={collapsedGroups.has(group.id)}
+            forceShowColorPicker={openColorPickerGroupId === group.id}
             onToggleCollapse={onToggleGroupCollapse}
             onRename={onRenameGroup}
             onChangeColor={onChangeGroupColor}
+            onOpenColorPicker={handleGroupColorPickerOpen}
             onUngroup={onUngroupGroup}
             onRightClick={handleGroupHeaderRightClick}
           />
@@ -211,9 +230,10 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
           isOpen={groupHeaderContextMenu.isOpen}
           position={groupHeaderContextMenu.position}
           groupId={groupHeaderContextMenu.groupId}
+          groupName={activityGroups.find(g => g.id === groupHeaderContextMenu.groupId)?.name || ''}
           onClose={handleCloseGroupHeaderContextMenu}
           onRename={onRenameGroup}
-          onChangeColor={onChangeGroupColor}
+          onChangeColor={handleOpenGroupColorPicker}
           onUngroup={onUngroupGroup}
         />
       )}

@@ -6,9 +6,11 @@ interface ActivityGroupHeaderProps {
   group: ActivityGroup;
   totalColumns: number;
   isCollapsed: boolean;
+  forceShowColorPicker?: boolean;
   onToggleCollapse: (groupId: string) => void;
   onRename: (groupId: string, newName: string) => void;
   onChangeColor: (groupId: string, newColor: string) => void;
+  onOpenColorPicker?: (groupId: string) => void;
   onUngroup: (groupId: string) => void;
   onRightClick: (e: React.MouseEvent, groupId: string) => void;
 }
@@ -28,9 +30,11 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   group,
   totalColumns,
   isCollapsed,
+  forceShowColorPicker = false,
   onToggleCollapse,
   onRename,
   onChangeColor,
+  onOpenColorPicker,
   onUngroup,
   onRightClick
 }) => {
@@ -50,6 +54,12 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   useEffect(() => {
     setEditName(group.name);
   }, [group.name]);
+
+  useEffect(() => {
+    if (forceShowColorPicker) {
+      setShowColorPicker(true);
+    }
+  }, [forceShowColorPicker]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,6 +99,13 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   const handleColorChange = (newColor: string) => {
     onChangeColor(group.id, newColor);
     setShowColorPicker(false);
+  };
+
+  const handleOpenColorPicker = () => {
+    setShowColorPicker(!showColorPicker);
+    if (onOpenColorPicker && !showColorPicker) {
+      onOpenColorPicker(group.id);
+    }
   };
 
   return (
@@ -167,7 +184,7 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
             {/* Color Picker */}
             <div className="relative" ref={colorPickerRef}>
               <button
-                onClick={() => setShowColorPicker(!showColorPicker)}
+                onClick={handleOpenColorPicker}
                 className="p-1 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
                 title="Change group color"
               >
