@@ -53,7 +53,7 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   onClick,
   onAddItem,
   setHoveredDropZone,
-  onCommentClick
+  onCommentClick,
   onRightClick,
   onShowHeader,
   onUnfocusAllHeaders
