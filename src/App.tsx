@@ -48,62 +48,72 @@ function App() {
 
     const { id: focusedId, type: focusedType } = focusedTimelineItem;
     
-    // New precise filtering logic
-    const filteredPeriods: Period[] = [];
-    
-    for (const period of soaData.periods) {
-      // Check if this period should be included
-      let shouldIncludePeriod = false;
-      let filteredCycles: Cycle[] = [];
-      
-      if (focusedType === 'period' && period.id === focusedId) {
-        // Focus on this specific period - include it entirely
-        shouldIncludePeriod = true;
-        filteredCycles = period.cycles;
-      } else {
-        // Check cycles within this period
+    // Helper function to find parent hierarchy for any item
+    const findItemHierarchy = (targetId: string, targetType: EditableItemType) => {
+      for (const period of soaData.periods) {
+        if (targetType === 'period' && period.id === targetId) {
+          return { period, cycle: null, week: null, day: null };
+        }
+        
         for (const cycle of period.cycles) {
-          let shouldIncludeCycle = false;
-          let filteredWeeks: Week[] = [];
+          if (targetType === 'cycle' && cycle.id === targetId) {
+            return { period, cycle, week: null, day: null };
+          }
           
-          if (focusedType === 'cycle' && cycle.id === focusedId) {
-            // Focus on this specific cycle - include it entirely
-            shouldIncludeCycle = true;
-            filteredWeeks = cycle.weeks;
-          } else {
-            // Check weeks within this cycle
-            for (const week of cycle.weeks) {
-              let shouldIncludeWeek = false;
-              let filteredDays = week.days;
-              
-              if (focusedType === 'week' && week.id === focusedId) {
-                // Focus on this specific week - include it entirely
-                shouldIncludeWeek = true;
-              } else if (focusedType === 'day') {
-                // Focus on a specific day - only include that day
-                const focusedDay = week.days.find(day => day.id === focusedId);
-                if (focusedDay) {
-                  shouldIncludeWeek = true;
-                  filteredDays = [focusedDay];
-                }
-              }
-              
-              if (shouldIncludeWeek) {
-                filteredWeeks.push({ ...week, days: filteredDays });
+          for (const week of cycle.weeks) {
+            if (targetType === 'week' && week.id === targetId) {
+              return { period, cycle, week, day: null };
+            }
+            
+            for (const day of week.days) {
+              if (targetType === 'day' && day.id === targetId) {
+                return { period, cycle, week, day };
               }
             }
           }
-          
-          if (shouldIncludeCycle || filteredWeeks.length > 0) {
-            filteredCycles.push({ ...cycle, weeks: filteredWeeks });
-            shouldIncludePeriod = true;
-          }
         }
       }
-      
-      if (shouldIncludePeriod) {
-        filteredPeriods.push({ ...period, cycles: filteredCycles });
-      }
+      return null;
+    };
+
+    const hierarchy = findItemHierarchy(focusedId, focusedType);
+    if (!hierarchy) {
+      return soaData; // Fallback if item not found
+    }
+
+    // Build filtered structure based on focus type
+    let filteredPeriods: Period[] = [];
+
+    if (focusedType === 'period') {
+      // Show only the focused period with all its children
+      filteredPeriods = [hierarchy.period];
+    } else if (focusedType === 'cycle') {
+      // Show parent period but only with the focused cycle
+      filteredPeriods = [{
+        ...hierarchy.period,
+        cycles: [hierarchy.cycle!]
+      }];
+    } else if (focusedType === 'week') {
+      // Show parent period and cycle but only with the focused week
+      filteredPeriods = [{
+        ...hierarchy.period,
+        cycles: [{
+          ...hierarchy.cycle!,
+          weeks: [hierarchy.week!]
+        }]
+      }];
+    } else if (focusedType === 'day') {
+      // Show parent period, cycle, and week but only with the focused day
+      filteredPeriods = [{
+        ...hierarchy.period,
+        cycles: [{
+          ...hierarchy.cycle!,
+          weeks: [{
+            ...hierarchy.week!,
+            days: [hierarchy.day!]
+          }]
+        }]
+      }];
     }
 
     // Get all visible day IDs from the filtered structure
