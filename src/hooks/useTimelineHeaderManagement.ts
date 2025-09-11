@@ -7,6 +7,8 @@ export interface TimelineHeaderConfig {
   isFocused: boolean;
   originalPosition: number;
   type: 'period' | 'cycle' | 'week' | 'day' | 'visit' | 'time-of-day' | 'allowed-window' | 'time-relative';
+  isVisible: boolean;
+  isActive: boolean;
 }
 
 export interface TimelineHeaderManagement {
@@ -18,14 +20,14 @@ export interface TimelineHeaderManagement {
 }
 
 const DEFAULT_HEADERS: TimelineHeaderConfig[] = [
-  { id: 'period', label: 'PERIOD', isFocused: false, originalPosition: 0, type: 'period' },
-  { id: 'cycle', label: 'CYCLE', isFocused: false, originalPosition: 1, type: 'cycle' },
-  { id: 'week', label: 'WEEK', isFocused: false, originalPosition: 2, type: 'week' },
-  { id: 'day', label: 'DAY', isFocused: false, originalPosition: 3, type: 'day' },
-  { id: 'time-relative', label: 'TIME RELATIVE (H)', isFocused: false, originalPosition: 4, type: 'time-relative' },
-  { id: 'time-of-day', label: 'TIME OF DAY', isFocused: false, originalPosition: 5, type: 'time-of-day' },
-  { id: 'allowed-window', label: 'TIME WINDOW (H)', isFocused: false, originalPosition: 6, type: 'allowed-window' },
-  { id: 'visit', label: 'VISIT LABEL', isFocused: false, originalPosition: 7, type: 'visit' }
+  { id: 'period', label: 'PERIOD', isFocused: false, originalPosition: 0, type: 'period', isVisible: true, isActive: true },
+  { id: 'cycle', label: 'CYCLE', isFocused: false, originalPosition: 1, type: 'cycle', isVisible: true, isActive: true },
+  { id: 'week', label: 'WEEK', isFocused: false, originalPosition: 2, type: 'week', isVisible: true, isActive: true },
+  { id: 'day', label: 'DAY', isFocused: false, originalPosition: 3, type: 'day', isVisible: true, isActive: true },
+  { id: 'time-relative', label: 'TIME RELATIVE (H)', isFocused: false, originalPosition: 4, type: 'time-relative', isVisible: true, isActive: true },
+  { id: 'time-of-day', label: 'TIME OF DAY', isFocused: false, originalPosition: 5, type: 'time-of-day', isVisible: true, isActive: true },
+  { id: 'allowed-window', label: 'TIME WINDOW (H)', isFocused: false, originalPosition: 6, type: 'allowed-window', isVisible: true, isActive: true },
+  { id: 'visit', label: 'VISIT LABEL', isFocused: false, originalPosition: 7, type: 'visit', isVisible: true, isActive: true }
 ];
 
 export const useTimelineHeaderManagement = () => {
@@ -38,6 +40,17 @@ export const useTimelineHeaderManagement = () => {
   const isFocusMode = useMemo(() => 
     focusedHeaderId !== null && focusedHeaderType !== null,
     [focusedHeaderId, focusedHeaderType]
+  );
+
+  // Computed arrays for active and inactive headers
+  const activeHeaders = useMemo(() => 
+    headers.filter(header => header.isActive),
+    [headers]
+  );
+
+  const inactiveHeaders = useMemo(() => 
+    headers.filter(header => !header.isActive),
+    [headers]
   );
 
   // Header renaming
@@ -93,9 +106,38 @@ export const useTimelineHeaderManagement = () => {
     return focusedHeaderId === headerId;
   }, [focusedHeaderId]);
 
+  // Toggle visibility
+  const toggleVisibility = useCallback((headerId: string) => {
+    setHeaders(prev => prev.map(header => 
+      header.id === headerId 
+        ? { ...header, isVisible: !header.isVisible }
+        : header
+    ));
+  }, []);
+
+  // Disable header
+  const disableHeader = useCallback((headerId: string) => {
+    setHeaders(prev => prev.map(header => 
+      header.id === headerId 
+        ? { ...header, isActive: false, isVisible: false }
+        : header
+    ));
+  }, []);
+
+  // Enable header
+  const enableHeader = useCallback((headerId: string) => {
+    setHeaders(prev => prev.map(header => 
+      header.id === headerId 
+        ? { ...header, isActive: true, isVisible: true }
+        : header
+    ));
+  }, []);
+
   return {
     // State
     headers,
+    activeHeaders,
+    inactiveHeaders,
     editingHeaderId,
     focusedHeaderId,
     focusedHeaderType,
@@ -107,6 +149,9 @@ export const useTimelineHeaderManagement = () => {
     cancelEditingHeader,
     focusHeader,
     unfocusHeader,
+    toggleVisibility,
+    disableHeader,
+    enableHeader,
     
     // Utilities
     getHeaderById,
