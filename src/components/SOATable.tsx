@@ -247,9 +247,9 @@ export const SOATable: React.FC<SOATableProps> = ({
   const getActivityDayIndices = (activityId: string, dayId: string) => {
     const activityIndex = (data.activities || []).findIndex(a => a.id === activityId);
     if (activityIndex === -1) return null;
-
+  const getAllDays = (sourceData = displayData): Day[] => {
     const allDays: Day[] = [];
-    data.periods.forEach(period => {
+    sourceData.periods.forEach(period => {
       period.cycles.forEach(cycle => {
         cycle.weeks.forEach(week => {
           allDays.push(...week.days);
@@ -486,8 +486,8 @@ export const SOATable: React.FC<SOATableProps> = ({
     onDataChange(newData);
   };
 
-  const getTotalDays = () => {
-    return displayData.periods.reduce((total, period) => {
+  const getTotalDays = (sourceData = displayData) => {
+    return sourceData.periods.reduce((total, period) => {
       return total + period.cycles.reduce((cycleTotal, cycle) => {
         return cycleTotal + cycle.weeks.reduce((weekTotal, week) => {
           return weekTotal + week.days.length;
@@ -1141,8 +1141,8 @@ export const SOATable: React.FC<SOATableProps> = ({
     });
   };
 
-  const getActivityCell = (activityId: string, dayId: string): ActivityCell | undefined => {
-    const activity = data.activities?.find(a => a.id === activityId);
+  const getActivityCell = (activityId: string, dayId: string, sourceData = displayData): ActivityCell | undefined => {
+    const activity = sourceData.activities.find(a => a.id === activityId);
     return activity?.cells.find(c => c.dayId === dayId);
   };
 
