@@ -1,7 +1,8 @@
 import React from 'react';
-import { SOAData, EditableItemType } from '../../types/soa';
+import { SOAData, EditableItemType, Period, Cycle, Week, Day } from '../../types/soa';
 import { DraggableCell } from '../DraggableCell';
 import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
+import { TimelineHeaderContextMenu } from '../TimelineHeaderContextMenu';
 
 interface TimelineHeaderSectionProps {
   data: SOAData;
@@ -42,10 +43,22 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   onItemClick,
   onAddItem,
   setHoveredDropZone,
-  validateDrop,
   hasComment,
   onCommentClick
 }) => {
+  const [contextMenu, setContextMenu] = React.useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    headerId: string | null;
+    headerType: EditableItemType | null;
+    headerName: string;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    headerId: null,
+    headerType: null,
+    headerName: ''
+  });
 
   // Helper function to get header by type from centralized state
   const getHeaderByType = (type: string) => {
@@ -58,6 +71,53 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     return header ? (header.isActive && header.isVisible) : false;
   };
 
+  // Handle context menu
+  const handleContextMenu = React.useCallback((e: React.MouseEvent, headerId: string, headerType: EditableItemType) => {
+    e.preventDefault();
+    
+    // Only show context menu for timeline headers (period, cycle, week)
+    if (!['period', 'cycle', 'week'].includes(headerType)) {
+      return;
+    }
+
+    // Find the header name
+    let headerName = '';
+    if (headerType === 'period') {
+      const period = data.periods.find(p => p.id === headerId);
+      headerName = period?.name || '';
+    } else if (headerType === 'cycle') {
+      for (const period of data.periods) {
+        const cycle = period.cycles.find(c => c.id === headerId);
+        if (cycle) {
+          headerName = cycle.name;
+          break;
+        }
+      }
+    } else if (headerType === 'week') {
+      for (const period of data.periods) {
+        for (const cycle of period.cycles) {
+          const week = cycle.weeks.find(w => w.id === headerId);
+          if (week) {
+            headerName = week.name;
+            break;
+          }
+        }
+      }
+    }
+
+    setContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      headerId,
+      headerType,
+      headerName
+    });
+  }, [data]);
+
+  const handleCloseContextMenu = React.useCallback(() => {
+    setContextMenu(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
   const renderDraggableCell = (
     title: string,
     colSpan: number,
@@ -68,11 +128,9 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   ) => {
     const isHovered = hoveredItems[type] === item.id;
     const isDragging = dragState.isDragging && dragState.draggedItem?.id === item.id;
+    const isFocused = headerManagement.isHeaderFocused(item.id);
     const isValidDropTarget = dragState.isDragging && 
-      dragState.draggedItem?.id !== item.id &&
-      (validateDrop(dragState.draggedType, type, 'before') ||
-       validateDrop(dragState.draggedType, type, 'after') ||
-       validateDrop(dragState.draggedType, type, 'inside'));
+      dragState.draggedItem?.id !== item.id;
     
     return (
       <DraggableCell
@@ -85,17 +143,19 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         bgColor={bgColor}
         isDragging={isDragging}
         isHovered={isHovered}
+        isFocused={isFocused}
         isValidDropTarget={isValidDropTarget}
         hoveredDropZone={dragState.hoveredDropZone}
         hasComment={hasComment(item.id, type)}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onDrop={onDrop}
+        onUnfocus={headerManagement.unfocusHeader}
         onMouseEnter={() => onItemHover(type, item.id)}
         onMouseLeave={() => onItemHover(type, null)}
         onClick={() => onItemClick(item, type)}
-        onAddItem={onAddItem}
         setHoveredDropZone={setHoveredDropZone}
+        onContextMenu={handleContextMenu}
         onCommentClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           onCommentClick(item.id, type, {
@@ -108,36 +168,31 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   };
 
   // Calculate colspan for periods
-  const getPeriodColspan = (period: any): number => {
+  const getPeriodColspan = (period: Period): number => {
     return period.cycles.reduce((total: number, cycle: any) => {
-      return total + cycle.weeks.reduce((weekTotal: number, week: any) => {
+      const cycleColspan = cycle.weeks.reduce((weekTotal: number, week: any) => {
         return weekTotal + week.days.length;
       }, 0);
+      return total + cycleColspan;
     }, 0);
   };
 
   // Calculate colspan for cycles
-  const getCycleColspan = (cycle: any): number => {
+  const getCycleColspan = (cycle: Cycle): number => {
     return cycle.weeks.reduce((total: number, week: any) => {
       return total + week.days.length;
     }, 0);
   };
 
-  // Calculate total columns for the hidden container
-  const getTotalColumns = () => {
-    return data.periods.reduce((total, period) => {
-      return total + period.cycles.reduce((cycleTotal, cycle) => {
-        return cycleTotal + cycle.weeks.reduce((weekTotal, week) => {
-          return weekTotal + week.days.length;
-        }, 0);
-      }, 0);
-    }, 0);
+  // Calculate colspan for weeks
+  const getWeekColspan = (week: Week): number => {
+    return week.days.length;
   };
 
   return (
-    <thead>
-      {/* Period Row */}
-      {isHeaderVisible('period') && (
+    <>
+      <thead>
+        {/* Period Row */}
         <tr>
           {(() => {
             const header = getHeaderByType('period');
@@ -146,15 +201,13 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 id={header?.id || 'period'}
                 label={header?.label || 'PERIOD'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
-                isVisible={header?.isVisible || false}
                 onStartEdit={headerManagement.startEditingHeader}
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
-                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
-          {data.periods.map(period => 
+          {data.periods.map(period =>
             renderDraggableCell(
               period.name,
               getPeriodColspan(period),
@@ -165,10 +218,8 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
             )
           )}
         </tr>
-      )}
 
-      {/* Cycle Row */}
-      {isHeaderVisible('cycle') && (
+        {/* Cycle Row */}
         <tr>
           {(() => {
             const header = getHeaderByType('cycle');
@@ -177,11 +228,9 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 id={header?.id || 'cycle'}
                 label={header?.label || 'CYCLE'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
-                isVisible={header?.isVisible || false}
                 onStartEdit={headerManagement.startEditingHeader}
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
-                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
@@ -198,10 +247,8 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
             )
           )}
         </tr>
-      )}
 
-      {/* Week Row */}
-      {isHeaderVisible('week') && (
+        {/* Week Row */}
         <tr>
           {(() => {
             const header = getHeaderByType('week');
@@ -210,11 +257,9 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 id={header?.id || 'week'}
                 label={header?.label || 'WEEK'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
-                isVisible={header?.isVisible || false}
                 onStartEdit={headerManagement.startEditingHeader}
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
-                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
@@ -223,7 +268,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               cycle.weeks.map(week =>
                 renderDraggableCell(
                   week.name,
-                  week.days.length,
+                  getWeekColspan(week),
                   'week',
                   week,
                   'bg-orange-100',
@@ -233,10 +278,8 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
             )
           )}
         </tr>
-      )}
 
-      {/* Day Row */}
-      {isHeaderVisible('day') && (
+        {/* Day Row */}
         <tr>
           {(() => {
             const header = getHeaderByType('day');
@@ -245,11 +288,9 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 id={header?.id || 'day'}
                 label={header?.label || 'DAY'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
-                isVisible={header?.isVisible || false}
                 onStartEdit={headerManagement.startEditingHeader}
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
-                onToggleVisibility={headerManagement.hideHeader}
               />
             );
           })()}
@@ -270,7 +311,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
             )
           )}
         </tr>
-      )}
-    </thead>
+      </thead>
+
+      {/* Context Menu */}
+      <TimelineHeaderContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        headerId={contextMenu.headerId}
+        headerType={contextMenu.headerType}
+        headerName={contextMenu.headerName}
+        isHeaderFocused={contextMenu.headerId ? headerManagement.isHeaderFocused(contextMenu.headerId) : false}
+        isFocusMode={headerManagement.isFocusMode}
+        onFocus={headerManagement.focusHeader}
+        onUnfocus={headerManagement.unfocusHeader}
+        onClose={handleCloseContextMenu}
+      />
+    </>
   );
 };

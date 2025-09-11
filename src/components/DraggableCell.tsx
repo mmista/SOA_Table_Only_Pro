@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, Plus } from 'lucide-react';
+import { GripVertical, X } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 import { CommentIcon } from './CommentIcon';
 
@@ -12,17 +12,19 @@ interface DraggableCellProps {
   bgColor: string;
   isDragging: boolean;
   isHovered: boolean;
+  isFocused: boolean;
   isValidDropTarget: boolean;
   hoveredDropZone: string | null;
   hasComment?: boolean;
   onDragStart: (item: any, type: EditableItemType) => void;
   onDragEnd: () => void;
   onDrop: (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => void;
+  onUnfocus: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onClick: () => void;
-  onAddItem: (type: EditableItemType, id: string, side: 'left' | 'right') => void;
   setHoveredDropZone: (zoneId: string | null) => void;
+  onContextMenu: (e: React.MouseEvent, headerId: string, headerType: EditableItemType) => void;
   onCommentClick?: (e: React.MouseEvent) => void;
 }
 
@@ -35,17 +37,19 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   bgColor,
   isDragging,
   isHovered,
+  isFocused,
   isValidDropTarget,
   hoveredDropZone,
   hasComment = false,
   onDragStart,
   onDragEnd,
   onDrop,
+  onUnfocus,
   onMouseEnter,
   onMouseLeave,
   onClick,
-  onAddItem,
   setHoveredDropZone,
+  onContextMenu,
   onCommentClick
 }) => {
   const [dragOver, setDragOver] = useState<'before' | 'after' | 'inside' | null>(null);
@@ -139,27 +143,40 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       default: return 'text-xs font-normal text-gray-500';
     }
   };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onContextMenu(e, item.id, type);
+  };
+
+  const handleUnfocus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onUnfocus();
+  };
+
   return (
     <td
       key={item.id}
       colSpan={colSpan}
       className={`
         relative border border-gray-300 px-3 py-2 text-center text-sm font-medium 
-        ${bgColor} cursor-pointer hover:bg-opacity-80 transition-all duration-200 
+        ${bgColor} cursor-pointer hover:bg-opacity-80 transition-all duration-200
         group
         ${isDragging ? 'opacity-50 scale-95' : ''}
         ${isValidDropTarget ? 'ring-1 ring-blue-300' : ''}
+        ${isFocused ? 'ring-2 ring-blue-500 ring-opacity-75' : ''}
         ${getDropZoneStyle()}
       `}
-      draggable
+      draggable={!isFocused}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onContextMenu={handleContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      onClick={onClick}
+      onClick={isFocused ? handleUnfocus : onClick}
     >
       {/* Comment icon in top-right corner */}
       {onCommentClick && (
@@ -175,10 +192,25 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
         </div>
       )}
       
+      {/* Focus indicator and exit button */}
+      {isFocused && (
+        <div className="absolute top-1 left-1 z-[5]">
+          <button
+            onClick={handleUnfocus}
+            className="p-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+            title="Exit focus mode"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+      
       {/* Drag Handle */}
-      <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
-      </div>
+      {!isFocused && (
+        <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
+        </div>
+      )}
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center">
@@ -207,34 +239,17 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
         </>
       )}
 
-      {/* Add Buttons */}
-      {isHovered && !isDragging && (
-        <>
-          <button
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors z-30"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddItem(type, item.id, 'left');
-            }}
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-          <button
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors z-30"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddItem(type, item.id, 'right');
-            }}
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-        </>
-      )}
-
       {/* Tooltip */}
-      {dragOver && isValidDropTarget && (
+      {dragOver && isValidDropTarget && !isFocused && (
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-40">
           Drop {dragOver === 'inside' ? 'inside' : dragOver} {type}
+        </div>
+      )}
+      
+      {/* Focus mode tooltip */}
+      {isFocused && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-blue-600 text-white text-xs rounded whitespace-nowrap z-40">
+          Focused - Click to exit
         </div>
       )}
     </td>
