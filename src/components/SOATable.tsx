@@ -18,6 +18,7 @@ import { VisitLinkPanel } from './VisitLinkPanel';
 import { useDragDrop } from '../hooks/useDragDrop';
 import { useVisitLinks } from '../hooks/useVisitLinks';
 import { useComments } from '../hooks/useComments';
+import { generateSampleData, generateEmptyData } from '../utils/presetData';
 
 interface SOATableProps {
   data: SOAData;
@@ -1390,6 +1391,42 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     changeActivityGroupColor(groupId, newColor);
   };
 
+  // Function to load sample data
+  const handleLoadSampleData = () => {
+    if (window.confirm('This will replace all current data with sample data. Are you sure?')) {
+      const sampleData = generateSampleData();
+      onDataChange(sampleData);
+      
+      // Reset local state
+      setActivities(sampleData.activities || []);
+      setActivityGroups(sampleData.activityGroups || []);
+      setSelectedActivityCells(new Set());
+      setSelectedTimeWindowCells(new Set());
+      setSelectedActivityHeaders(new Set());
+      setCollapsedGroups(new Set());
+      setEditingActivity(null);
+      setEditValues({});
+    }
+  };
+
+  // Function to clear all data
+  const handleClearData = () => {
+    if (window.confirm('This will clear all data and reset to empty structure. Are you sure?')) {
+      const emptyData = generateEmptyData();
+      onDataChange(emptyData);
+      
+      // Reset local state
+      setActivities([]);
+      setActivityGroups([]);
+      setSelectedActivityCells(new Set());
+      setSelectedTimeWindowCells(new Set());
+      setSelectedActivityHeaders(new Set());
+      setCollapsedGroups(new Set());
+      setEditingActivity(null);
+      setEditValues({});
+    }
+  };
+
   return (
     <>
       <div className="flex flex-1 bg-gray-50 w-full">
@@ -1407,6 +1444,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
               historyLength={history.length}
               onUndo={undo}
               onOpenHeaderSettings={() => setShowHeaderSettingsModal(true)}
+              onLoadSampleData={handleLoadSampleData}
+              onClearData={handleClearData}
             />
             
             <div className="overflow-x-auto">

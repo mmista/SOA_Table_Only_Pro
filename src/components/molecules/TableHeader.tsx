@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, CheckCircle, Undo2, Settings } from 'lucide-react';
+import { MessageSquare, CheckCircle, Undo2, Settings, Database, Trash2 } from 'lucide-react';
 import { StatsBadge } from '../atoms/StatsBadge';
 import { DragIndicator } from '../atoms/DragIndicator';
 import { SuccessIndicator } from '../atoms/SuccessIndicator';
@@ -20,6 +20,8 @@ interface TableHeaderProps {
   historyLength: number;
   onUndo: () => void;
   onOpenHeaderSettings: () => void;
+  onLoadSampleData: () => void;
+  onClearData: () => void;
 }
 
 export const TableHeader: React.FC<TableHeaderProps> = ({
@@ -33,7 +35,9 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   canUndo,
   historyLength,
   onUndo,
-  onOpenHeaderSettings
+  onOpenHeaderSettings,
+  onLoadSampleData,
+  onClearData
 }) => {
   return (
     <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
@@ -80,6 +84,24 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       </div>
       
       <div className="flex items-center space-x-2">
+        <button
+          onClick={onLoadSampleData}
+          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-green-600 hover:bg-green-700 text-white"
+          title="Load Sample Data"
+        >
+          <Database className="w-4 h-4" />
+          <span>Sample Data</span>
+        </button>
+        
+        <button
+          onClick={onClearData}
+          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+          title="Clear All Data"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Clear Data</span>
+        </button>
+        
         <button
           onClick={onOpenHeaderSettings}
           className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
