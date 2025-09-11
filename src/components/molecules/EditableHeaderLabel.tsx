@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Eye, EyeOff, Edit2, Check, X } from 'lucide-react';
+import { Eye, EyeOff, Edit2, Check, X, Minimize2 } from 'lucide-react';
 
 interface EditableHeaderLabelProps {
   id: string;
@@ -9,7 +9,7 @@ interface EditableHeaderLabelProps {
   onStartEdit: (id: string) => void;
   onSaveLabel: (id: string, newLabel: string) => void;
   onCancelEdit: () => void;
-  onToggleVisibility: (id: string) => void;
+  onToggleHeaderVisibility: (id: string) => void;
   className?: string;
 }
 
@@ -21,7 +21,7 @@ export const EditableHeaderLabel: React.FC<EditableHeaderLabelProps> = ({
   onStartEdit,
   onSaveLabel,
   onCancelEdit,
-  onToggleVisibility,
+  onToggleHeaderVisibility,
   className = "sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]"
 }) => {
   const [editValue, setEditValue] = useState(label);
@@ -57,9 +57,9 @@ export const EditableHeaderLabel: React.FC<EditableHeaderLabelProps> = ({
     }
   };
 
-  const handleToggleVisibility = (e: React.MouseEvent) => {
+  const handleToggleHeaderVisibility = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleVisibility(id); // This now calls hideHeaderRow
+    onToggleHeaderVisibility(id);
   };
 
   if (!isVisible) {
@@ -110,11 +110,11 @@ export const EditableHeaderLabel: React.FC<EditableHeaderLabelProps> = ({
             </button>
             
             <button
-              onClick={handleToggleVisibility}
+              onClick={handleToggleHeaderVisibility}
               className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100 ml-2 flex-shrink-0"
-              title="Hide this row"
+              title="Toggle row visibility"
             >
-              <EyeOff className="w-3 h-3" />
+              <Minimize2 className="w-3 h-3" />
             </button>
           </>
         )}

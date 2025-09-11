@@ -56,16 +56,22 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
     const focusedId = headerManagement.focusedHeaderId;
     const focusedType = headerManagement.focusedHeaderType;
 
-    // Create a deep copy of the data
-    const filteredData: SOAData = {
-      ...originalData,
-      periods: []
-    };
+    // Create a filtered copy of the data
+    const filteredData: SOAData = { ...originalData, periods: [] };
+    const visibleDayIds: string[] = [];
 
     // Filter based on focused header type and ID
     for (const period of originalData.periods) {
       if (focusedType === 'period' && period.id === focusedId) {
         filteredData.periods.push(period);
+        // Collect all day IDs from this period
+        period.cycles.forEach(cycle => {
+          cycle.weeks.forEach(week => {
+            week.days.forEach(day => {
+              visibleDayIds.push(day.id);
+            });
+          });
+        });
         break;
       }
       
@@ -75,6 +81,12 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
       for (const cycle of period.cycles) {
         if (focusedType === 'cycle' && cycle.id === focusedId) {
           filteredPeriod.cycles.push(cycle);
+          // Collect all day IDs from this cycle
+          cycle.weeks.forEach(week => {
+            week.days.forEach(day => {
+              visibleDayIds.push(day.id);
+            });
+          });
           shouldIncludePeriod = true;
           break;
         }
@@ -85,7 +97,11 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         for (const week of cycle.weeks) {
           if (focusedType === 'week' && week.id === focusedId) {
             filteredCycle.weeks.push(week);
-            shouldIncludeCycle = true;
+            // Collect all day IDs from this week
+            week.days.forEach(day => {
+              visibleDayIds.push(day.id);
+            });
+            shouldIncludeWeek = true;
             break;
           }
           
@@ -95,6 +111,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
           for (const day of week.days) {
             if (focusedType === 'day' && day.id === focusedId) {
               filteredWeek.days.push(day);
+              visibleDayIds.push(day.id);
               shouldIncludeWeek = true;
               break;
             }
@@ -116,6 +133,23 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         filteredData.periods.push(filteredPeriod);
       }
     }
+
+    // Filter static data arrays based on visible day IDs
+    filteredData.timeRelativeCells = originalData.timeRelativeCells?.filter(cell => 
+      visibleDayIds.includes(cell.dayId)
+    ) || [];
+    
+    filteredData.timeWindowCells = originalData.timeWindowCells?.filter(cell => 
+      visibleDayIds.includes(cell.dayId)
+    ) || [];
+    
+    filteredData.timeOfDayCells = originalData.timeOfDayCells?.filter(cell => 
+      visibleDayIds.includes(cell.dayId)
+    ) || [];
+    
+    filteredData.visitLinks = originalData.visitLinks?.filter(link => 
+      link.visitIds.some(visitId => visibleDayIds.includes(visitId))
+    ) || [];
 
     return filteredData;
   }, [headerManagement.isFocusMode, headerManagement.focusedHeaderId, headerManagement.focusedHeaderType]);
@@ -183,15 +217,15 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
             onStartEdit={headerManagement.startEditingHeader}
             onSaveLabel={headerManagement.saveHeaderLabel}
             onCancelEdit={headerManagement.cancelEditingHeader}
-            onToggleVisibility={headerManagement.hideHeader}
+            onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
           />
             );
           })()}
-          {data.periods.map(period =>
+          {currentData.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
-                  const value = getCellValue(timeRelativeCells, day.id, 24);
+                  const value = getCellValue(currentData.timeRelativeCells || [], day.id, 24);
                   return (
                     <StaticTableCell
                       key={`time-relative-${day.id}`}
@@ -222,7 +256,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                 onStartEdit={headerManagement.startEditingHeader}
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
-                onToggleVisibility={headerManagement.hideHeader}
+                onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
               />
             );
           })()}
@@ -230,7 +264,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
-                  const cellData = timeWindowCells.find(cell => cell.dayId === day.id);
+                  const cellData = (currentData.timeWindowCells || []).find(cell => cell.dayId === day.id);
                   const value = cellData?.value || 24;
                   const isSelected = selectedTimeWindowCells.has(day.id);
                   const isMerged = cellData && ((cellData.colspan && cellData.colspan > 1) || (cellData.rowspan && cellData.rowspan > 1));
@@ -277,15 +311,15 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
             onStartEdit={headerManagement.startEditingHeader}
             onSaveLabel={headerManagement.saveHeaderLabel}
             onCancelEdit={headerManagement.cancelEditingHeader}
-            onToggleVisibility={headerManagement.hideHeader}
+            onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
           />
             );
           })()}
-          {data.periods.map(period =>
+          {currentData.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
-                  const value = getCellValue(timeOfDayCells, day.id, 'Morning');
+                  const value = getCellValue(currentData.timeOfDayCells || [], day.id, 'Morning');
                   return (
                     <StaticTableCell
                       key={`time-${day.id}`}
@@ -317,11 +351,11 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
             onStartEdit={headerManagement.startEditingHeader}
             onSaveLabel={headerManagement.saveHeaderLabel}
             onCancelEdit={headerManagement.cancelEditingHeader}
-            onToggleVisibility={headerManagement.hideHeader}
+            onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
           />
             );
           })()}
-          {data.periods.map(period =>
+          {currentData.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
@@ -358,7 +392,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
           hiddenHeaders={headerManagement.hiddenHeaders}
           isExpanded={headerManagement.isHiddenContainerExpanded}
           onToggleExpanded={headerManagement.toggleHiddenContainer}
-          onRestoreHeader={headerManagement.showHeader}
+          onRestoreHeader={headerManagement.showHeaderRow}
           onRestoreAll={headerManagement.restoreAllHeaders}
           totalColumns={totalColumns}
         />
