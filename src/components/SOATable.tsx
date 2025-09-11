@@ -521,7 +521,10 @@ export const SOATable: React.FC<SOATableProps> = ({
       newData.periods.splice(insertIndex, 0, newPeriod);
     } else if (type === 'cycle') {
       for (const period of newData.periods) {
-        const cycleIndex = period.cycles.findIndex(c => c.id === id);
+      
+    )
+  }
+}  const cycleIndex = period.cycles.findIndex(c => c.id === id);
         if (cycleIndex !== -1) {
           const insertIndex = side === 'right' ? cycleIndex + 1 : cycleIndex;
           const newCycle: Cycle = {
