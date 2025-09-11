@@ -136,6 +136,7 @@ function App() {
     <div className="min-h-screen bg-gray-100 pb-8">
       <SOATable
         data={currentData}
+        fullData={soaData}
         onDataChange={handleDataChange}
         headerManagement={headerManagement}
       />

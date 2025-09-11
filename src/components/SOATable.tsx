@@ -1,287 +1,624 @@
-import React, { useState } from 'react';
-import { SOAData, Period, Cycle, Week, Day, EditContext, EditableItemType, ActivityData, ActivityCell, VisitType } from '../types/soa';
-import { EditPanel } from './EditPanel';
-import { EmptyGroupModal } from './EmptyGroupModal';
-import { VisitTypeSelector } from './VisitTypeSelector';
-import { CommentModal } from './CommentModal';
-import { ActivityCellContextMenu } from './ActivityCellContextMenu';
-import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
-import { ActivityHeaderContextMenu } from './ActivityHeaderContextMenu';
-import { ActivityGroupHeaderContextMenu } from './ActivityGroupHeaderContextMenu';
-import { TextInputModal } from './TextInputModal';
-import { ActivityGroup } from '../types/soa';
+import React, { useState, useCallback, useMemo } from 'react';
+import { SOAData, ActivityData, ActivityGroup, ActivityCell, EditContext, EditableItemType, VisitType, TimeRelativeCell, TimeWindowCell, TimeOfDayCell } from '../types/soa';
+import { useDragDrop } from '../hooks/useDragDrop';
+import { useComments } from '../hooks/useComments';
+import { useVisitLinks } from '../hooks/useVisitLinks';
+import { useTimelineHeaderManagement } from '../hooks/useTimelineHeaderManagement';
+import { generateSampleData, generateEmptyData } from '../utils/presetData';
+import { GROUP_COLORS } from '../utils/constants';
+
+// Component imports
 import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
 import { StaticRowsSection } from './organisms/StaticRowsSection';
 import { ActivityRowsSection } from './organisms/ActivityRowsSection';
+import { EditPanel } from './EditPanel';
+import { CommentModal } from './CommentModal';
+import { EmptyGroupModal } from './EmptyGroupModal';
+import { ActivityCellContextMenu } from './ActivityCellContextMenu';
+import { ActivityHeaderContextMenu } from './ActivityHeaderContextMenu';
+import { VisitTypeSelector } from './VisitTypeSelector';
+import { TextInputModal } from './TextInputModal';
 import { VisitLinkPanel } from './VisitLinkPanel';
-import { useDragDrop } from '../hooks/useDragDrop';
-import { useVisitLinks } from '../hooks/useVisitLinks';
-import { useComments } from '../hooks/useComments';
-import { generateSampleData, generateEmptyData } from '../utils/presetData';
+import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
 
 interface SOATableProps {
   data: SOAData;
+  fullData: SOAData;
   onDataChange: (data: SOAData) => void;
-  headerManagement: ReturnType<typeof import('../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
+  headerManagement: ReturnType<typeof useTimelineHeaderManagement>;
 }
 
-interface HoverState {
-  type: EditableItemType;
-  id: string;
-  side: 'left' | 'right';
-}
+export const SOATable: React.FC<SOATableProps> = ({ 
+  data, 
+  fullData, 
+  onDataChange, 
+  headerManagement 
+}) => {
+  // Initialize drag and drop with fullData instead of data
+  const dragDropHook = useDragDrop(fullData, onDataChange);
+  const commentsHook = useComments();
+  const visitLinksHook = useVisitLinks(fullData, onDataChange);
 
-// Define the state for the VisitLinkPanel
-interface VisitLinkPanelState {
-  isOpen: boolean;
-  dayId: string | null;
-}
-
-export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerManagement }) => {
-  const [hoveredCell, setHoveredCell] = useState<HoverState | null>(null);
+  // State management
   const [editContext, setEditContext] = useState<EditContext | null>(null);
-  const [showMoveSuccess, setShowMoveSuccess] = useState(false);
-  const [activities, setActivities] = useState<ActivityData[]>([]);
-  const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>(data.activityGroups || []);
+  const [selectedActivityCells, setSelectedActivityCells] = useState<Set<string>>(new Set());
+  const [selectedTimeWindowCells, setSelectedTimeWindowCells] = useState<Set<string>>(new Set());
+  const [selectedActivityHeaders, setSelectedActivityHeaders] = useState<Set<string>>(new Set());
+  const [lastSelectedCell, setLastSelectedCell] = useState<string | null>(null);
+  const [lastSelectedTimeWindowCell, setLastSelectedTimeWindowCell] = useState<string | null>(null);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<{ description?: string }>({});
   const [hoveredActivityRow, setHoveredActivityRow] = useState<string | null>(null);
-  const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
-  const [visitTypeSelector, setVisitTypeSelector] = useState<{
-    isOpen: boolean,
-    position: { x: number, y: number },
-    activityId: string,
-    dayId: string,
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [showMoveSuccess, setShowMoveSuccess] = useState(false);
+  const [hoveredItems, setHoveredItems] = useState<{
+    period: string | null;
+    cycle: string | null;
+    week: string | null;
+    day: string | null;
   }>({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    activityId: '',
-    dayId: ''
+    period: null,
+    cycle: null,
+    week: null,
+    day: null
   });
 
-  const [textInputState, setTextInputState] = useState<{
-    isOpen: boolean,
-    position: { x: number, y: number },
-    activityId: string,
-    dayId: string,
-  }>({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    activityId: '',
-    dayId: ''
-  });
-
-  const [groupHeaderContextMenu, setGroupHeaderContextMenu] = useState<{
+  // Context menus and modals
+  const [activityCellContextMenu, setActivityCellContextMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number };
-    groupId: string | null;
-    groupName: string;
-  }>({ isOpen: false, position: { x: 0, y: 0 }, groupId: null, groupName: '' });
-  
-  // New states for cell selection and context menu
-  const [selectedActivityCells, setSelectedActivityCells] = useState<Set<string>>(new Set());
-  const [selectionStartCell, setSelectionStartCell] = useState<{ activityId: string; dayId: string } | null>(null);
-  const [selectedTimeWindowCells, setSelectedTimeWindowCells] = useState<Set<string>>(new Set());
-  const [timeWindowSelectionStart, setTimeWindowSelectionStart] = useState<string | null>(null);
-  const [contextMenuState, setContextMenuState] = useState<{
-    isOpen: boolean;
-    x: number;
-    y: number;
     clickedCell: { activityId: string; dayId: string } | null;
     clickedTimeWindowCell: string | null;
   }>({
     isOpen: false,
-    x: 0,
-    y: 0,
+    position: { x: 0, y: 0 },
     clickedCell: null,
     clickedTimeWindowCell: null
   });
-  
-  // State for VisitLinkPanel
-  const [visitLinkPanelState, setVisitLinkPanelState] = useState<VisitLinkPanelState>({ isOpen: false, dayId: null });
-  
-  // State for Activity Header Selection and Grouping
-  const [selectedActivityHeaders, setSelectedActivityHeaders] = useState<Set<string>>(new Set());
-  const [activityHeaderContextMenuState, setActivityHeaderContextMenuState] = useState<{
+
+  const [activityHeaderContextMenu, setActivityHeaderContextMenu] = useState<{
     isOpen: boolean;
-    x: number;
-    y: number;
+    position: { x: number; y: number };
     clickedActivityId: string | null;
   }>({
     isOpen: false,
-    x: 0,
-    y: 0,
+    position: { x: 0, y: 0 },
     clickedActivityId: null
   });
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  
-  // Comments hook
-  const {
-    commentModal,
-    commentStats,
-    hasComment,
-    getComment,
-    saveComment,
-    deleteComment,
-    openCommentModal,
-    closeCommentModal
-  } = useComments();
-  
-  // Debug logging
-  const logActivityState = (context: string) => {
-    console.log(`=== ${context} ===`);
-    console.log('Current activities count:', data.activities?.length || 0);
-    if (data.activities && data.activities.length > 0) {
-      console.log('First activity cells count:', data.activities[0].cells.length);
-      console.log('Sample day IDs from activities:', data.activities[0].cells.slice(0, 5).map(c => c.dayId));
-    }
-    
-    const allDays: string[] = [];
-    data.periods.forEach(period => {
-      period.cycles.forEach(cycle => {
-        cycle.weeks.forEach(week => {
-          week.days.forEach(day => {
-            allDays.push(day.id);
-          });
-        });
-      });
-    });
-    console.log('Current data structure days count:', allDays.length);
-    console.log('Sample day IDs from data:', allDays.slice(0, 5));
-    console.log('========================');
-  };
-  
-  const {
-    dragState,
-    history,
-    emptyGroup,
-    handleDragStart,
-    handleDragEnd,
-    handleDrop,
-    validateDrop,
-    setHoveredDropZone,
-    undo,
-    canUndo,
-    handleKeepEmptyGroup,
-    handleDeleteEmptyGroup,
-    closeEmptyGroupModal
-  } = useDragDrop(data, onDataChange);
 
-  const {
-    isVisitLinked,
-    getLinkedVisits,
-    getVisitLinkInfo,
-    handleVisitHover,
-    handleActivityCellHover,
-    shouldHighlightVisit,
-    shouldHighlightActivityCell,
-    updateVisitLinks,
-    unlinkAllVisits,
-    cleanUpVisitLinks
-  } = useVisitLinks(data, onDataChange);
+  const [visitTypeSelector, setVisitTypeSelector] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    cellKey: string | null;
+    currentVisitType?: VisitType;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    cellKey: null
+  });
 
-  // Show success animation when a move completes
-  const showSuccessAnimation = () => {
-    setShowMoveSuccess(true);
-    setTimeout(() => {
-      setShowMoveSuccess(false);
-    }, 2000);
-  };
+  const [textInputModal, setTextInputModal] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    cellKey: string | null;
+    currentText?: string;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    cellKey: null
+  });
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
+  const [visitLinkPanel, setVisitLinkPanel] = useState<{
+    isOpen: boolean;
+    currentDayId: string | null;
+  }>({
+    isOpen: false,
+    currentDayId: null
+  });
 
-  // Helper function to get cell key
-  const getCellKey = (activityId: string, dayId: string) => `${activityId}_${dayId}`;
+  const [headerSettingsModal, setHeaderSettingsModal] = useState(false);
 
-  // Helper function to parse cell key
-  const parseCellKey = (key: string) => {
-    const [activityId, dayId] = key.split('_');
-    return { activityId, dayId };
-  };
+  // Helper functions that work with fullData
+  const getCellKey = useCallback((activityId: string, dayId: string) => {
+    return `${activityId}:${dayId}`;
+  }, []);
 
-  // Helper function to get activity and day indices
-  const getActivityDayIndices = (activityId: string, dayId: string) => {
-    const activityIndex = (data.activities || []).findIndex(a => a.id === activityId);
-    if (activityIndex === -1) return null;
+  const getActivityCell = useCallback((activityId: string, dayId: string): ActivityCell | undefined => {
+    const activity = fullData.activities?.find(a => a.id === activityId);
+    return activity?.cells.find(cell => cell.dayId === dayId);
+  }, [fullData.activities]);
 
-    const allDays: Day[] = [];
-    data.periods.forEach(period => {
+  const getTotalDays = useCallback(() => {
+    return fullData.periods.reduce((total, period) => {
+      return total + period.cycles.reduce((cycleTotal, cycle) => {
+        return cycleTotal + cycle.weeks.reduce((weekTotal, week) => {
+          return weekTotal + week.days.length;
+        }, 0);
+      }, 0);
+    }, 0);
+  }, [fullData.periods]);
+
+  const getAllDays = useCallback(() => {
+    const allDays: any[] = [];
+    fullData.periods.forEach(period => {
       period.cycles.forEach(cycle => {
         cycle.weeks.forEach(week => {
           allDays.push(...week.days);
         });
       });
     });
+    return allDays;
+  }, [fullData.periods]);
 
-    const dayIndex = allDays.findIndex(d => d.id === dayId);
-    if (dayIndex === -1) return null;
+  // Data modification functions that work with fullData
+  const updateFullData = useCallback((updater: (data: SOAData) => SOAData) => {
+    const newData = updater(JSON.parse(JSON.stringify(fullData)));
+    onDataChange(newData);
+  }, [fullData, onDataChange]);
 
-    return { activityIndex, dayIndex };
-  };
+  const updateActivityCell = useCallback((activityId: string, dayId: string, updates: Partial<ActivityCell>) => {
+    updateFullData(data => {
+      const activity = data.activities?.find(a => a.id === activityId);
+      if (activity) {
+        const cellIndex = activity.cells.findIndex(cell => cell.dayId === dayId);
+        if (cellIndex !== -1) {
+          activity.cells[cellIndex] = { ...activity.cells[cellIndex], ...updates };
+        } else {
+          activity.cells.push({
+            dayId,
+            isActive: false,
+            ...updates
+          });
+        }
+      }
+      return data;
+    });
+  }, [updateFullData]);
 
-  // Helper function to check if a cell is merged
-  const isCellMerged = (activityId: string, dayId: string) => {
-    const cell = getActivityCell(activityId, dayId);
-    return cell && ((cell.colspan && cell.colspan > 1) || (cell.rowspan && cell.rowspan > 1));
-  };
+  const updateTimeWindowCell = useCallback((dayId: string, updates: Partial<TimeWindowCell>) => {
+    updateFullData(data => {
+      if (!data.timeWindowCells) data.timeWindowCells = [];
+      const cellIndex = data.timeWindowCells.findIndex(cell => cell.dayId === dayId);
+      if (cellIndex !== -1) {
+        data.timeWindowCells[cellIndex] = { ...data.timeWindowCells[cellIndex], ...updates };
+      } else {
+        data.timeWindowCells.push({
+          id: `time-window-${dayId}`,
+          dayId,
+          value: 24,
+          ...updates
+        });
+      }
+      return data;
+    });
+  }, [updateFullData]);
 
+  // Activity cell operations
+  const handleActivityCellClick = useCallback((activityId: string, dayId: string, event: React.MouseEvent) => {
+    const cellKey = getCellKey(activityId, dayId);
+    
+    if (event.shiftKey && lastSelectedCell) {
+      // Range selection logic
+      const allCells: string[] = [];
+      fullData.periods.forEach(period => {
+        period.cycles.forEach(cycle => {
+          cycle.weeks.forEach(week => {
+            week.days.forEach(day => {
+              fullData.activities?.forEach(activity => {
+                allCells.push(getCellKey(activity.id, day.id));
+              });
+            });
+          });
+        });
+      });
 
-  const handleActivityEdit = (activityId: string) => {
-    const activity = data.activities?.find(a => a.id === activityId);
-    if (activity) {
-      setEditingActivity(activityId);
-      setEditValues({ description: activity.description });
+      const startIndex = allCells.indexOf(lastSelectedCell);
+      const endIndex = allCells.indexOf(cellKey);
+      
+      if (startIndex !== -1 && endIndex !== -1) {
+        const rangeStart = Math.min(startIndex, endIndex);
+        const rangeEnd = Math.max(startIndex, endIndex);
+        const rangeCells = allCells.slice(rangeStart, rangeEnd + 1);
+        
+        setSelectedActivityCells(new Set(rangeCells));
+      }
+    } else if (event.ctrlKey || event.metaKey) {
+      // Multi-select
+      setSelectedActivityCells(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(cellKey)) {
+          newSet.delete(cellKey);
+        } else {
+          newSet.add(cellKey);
+        }
+        return newSet;
+      });
+    } else {
+      // Single select and toggle activation
+      const cellData = getActivityCell(activityId, dayId);
+      const newActiveState = !cellData?.isActive;
+      
+      updateActivityCell(activityId, dayId, { isActive: newActiveState });
+      setSelectedActivityCells(new Set([cellKey]));
     }
-  };
+    
+    setLastSelectedCell(cellKey);
+  }, [getCellKey, lastSelectedCell, fullData, getActivityCell, updateActivityCell]);
 
-  const handleActivitySave = (activityId: string, newDescription: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
+  const handleActivityCellRightClick = useCallback((e: React.MouseEvent, activityId: string, dayId: string) => {
+    e.preventDefault();
+    const cellKey = getCellKey(activityId, dayId);
     
-    newData.activities = newData.activities.map(activity => 
-      activity.id === activityId 
-        ? { ...activity, description: newDescription }
-        : activity
-    );
+    if (!selectedActivityCells.has(cellKey)) {
+      setSelectedActivityCells(new Set([cellKey]));
+    }
     
-    onDataChange(newData);
+    setActivityCellContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      clickedCell: { activityId, dayId },
+      clickedTimeWindowCell: null
+    });
+  }, [getCellKey, selectedActivityCells]);
+
+  const handleTimeWindowCellClick = useCallback((dayId: string, event: React.MouseEvent) => {
+    if (event.shiftKey && lastSelectedTimeWindowCell) {
+      // Range selection for time window cells
+      const allDays = getAllDays();
+      const startIndex = allDays.findIndex(day => day.id === lastSelectedTimeWindowCell);
+      const endIndex = allDays.findIndex(day => day.id === dayId);
+      
+      if (startIndex !== -1 && endIndex !== -1) {
+        const rangeStart = Math.min(startIndex, endIndex);
+        const rangeEnd = Math.max(startIndex, endIndex);
+        const rangeDays = allDays.slice(rangeStart, rangeEnd + 1);
+        
+        setSelectedTimeWindowCells(new Set(rangeDays.map(day => day.id)));
+      }
+    } else if (event.ctrlKey || event.metaKey) {
+      // Multi-select
+      setSelectedTimeWindowCells(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(dayId)) {
+          newSet.delete(dayId);
+        } else {
+          newSet.add(dayId);
+        }
+        return newSet;
+      });
+    } else {
+      // Single select
+      setSelectedTimeWindowCells(new Set([dayId]));
+    }
+    
+    setLastSelectedTimeWindowCell(dayId);
+  }, [lastSelectedTimeWindowCell, getAllDays]);
+
+  const handleTimeWindowCellRightClick = useCallback((e: React.MouseEvent, dayId: string) => {
+    e.preventDefault();
+    
+    if (!selectedTimeWindowCells.has(dayId)) {
+      setSelectedTimeWindowCells(new Set([dayId]));
+    }
+    
+    setActivityCellContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      clickedCell: null,
+      clickedTimeWindowCell: dayId
+    });
+  }, [selectedTimeWindowCells]);
+
+  // Merge operations
+  const handleMergeActivityCells = useCallback(() => {
+    if (selectedActivityCells.size < 2) return;
+
+    const cellKeys = Array.from(selectedActivityCells);
+    const cells = cellKeys.map(key => {
+      const [activityId, dayId] = key.split(':');
+      return { activityId, dayId, cell: getActivityCell(activityId, dayId) };
+    }).filter(item => item.cell);
+
+    if (cells.length < 2) return;
+
+    // Group by activity
+    const cellsByActivity = cells.reduce((acc, { activityId, dayId, cell }) => {
+      if (!acc[activityId]) acc[activityId] = [];
+      acc[activityId].push({ dayId, cell });
+      return acc;
+    }, {} as Record<string, Array<{ dayId: string; cell: ActivityCell }>>);
+
+    updateFullData(data => {
+      Object.entries(cellsByActivity).forEach(([activityId, activityCells]) => {
+        if (activityCells.length < 2) return;
+
+        const activity = data.activities?.find(a => a.id === activityId);
+        if (!activity) return;
+
+        // Sort cells by day order
+        const allDays = getAllDays();
+        const sortedCells = activityCells.sort((a, b) => {
+          const aIndex = allDays.findIndex(day => day.id === a.dayId);
+          const bIndex = allDays.findIndex(day => day.id === b.dayId);
+          return aIndex - bIndex;
+        });
+
+        const firstCell = sortedCells[0];
+        const colspan = sortedCells.length;
+
+        // Update first cell
+        const firstCellIndex = activity.cells.findIndex(cell => cell.dayId === firstCell.dayId);
+        if (firstCellIndex !== -1) {
+          activity.cells[firstCellIndex] = {
+            ...activity.cells[firstCellIndex],
+            colspan,
+            customText: 'Continuous'
+          };
+        }
+
+        // Mark other cells as merged placeholders
+        sortedCells.slice(1).forEach(({ dayId }) => {
+          const cellIndex = activity.cells.findIndex(cell => cell.dayId === dayId);
+          if (cellIndex !== -1) {
+            activity.cells[cellIndex] = {
+              ...activity.cells[cellIndex],
+              isMergedPlaceholder: true
+            };
+          }
+        });
+      });
+
+      return data;
+    });
+
+    setSelectedActivityCells(new Set());
+  }, [selectedActivityCells, getActivityCell, updateFullData, getAllDays]);
+
+  const handleUnmergeActivityCells = useCallback(() => {
+    if (selectedActivityCells.size !== 1) return;
+
+    const cellKey = Array.from(selectedActivityCells)[0];
+    const [activityId, dayId] = cellKey.split(':');
+    const cellData = getActivityCell(activityId, dayId);
+
+    if (!cellData?.colspan || cellData.colspan <= 1) return;
+
+    updateFullData(data => {
+      const activity = data.activities?.find(a => a.id === activityId);
+      if (!activity) return data;
+
+      // Find the merged cell
+      const cellIndex = activity.cells.findIndex(cell => cell.dayId === dayId);
+      if (cellIndex === -1) return data;
+
+      const mergedCell = activity.cells[cellIndex];
+      const colspan = mergedCell.colspan || 1;
+
+      // Remove colspan and customText from the first cell
+      activity.cells[cellIndex] = {
+        ...mergedCell,
+        colspan: undefined,
+        customText: undefined
+      };
+
+      // Find and restore placeholder cells
+      const allDays = getAllDays();
+      const startIndex = allDays.findIndex(day => day.id === dayId);
+      
+      for (let i = 1; i < colspan; i++) {
+        const targetDayIndex = startIndex + i;
+        if (targetDayIndex < allDays.length) {
+          const targetDayId = allDays[targetDayIndex].id;
+          const placeholderIndex = activity.cells.findIndex(cell => 
+            cell.dayId === targetDayId && cell.isMergedPlaceholder
+          );
+          
+          if (placeholderIndex !== -1) {
+            activity.cells[placeholderIndex] = {
+              ...activity.cells[placeholderIndex],
+              isMergedPlaceholder: undefined
+            };
+          }
+        }
+      }
+
+      return data;
+    });
+
+    setSelectedActivityCells(new Set());
+  }, [selectedActivityCells, getActivityCell, updateFullData, getAllDays]);
+
+  const handleMergeTimeWindowCells = useCallback(() => {
+    if (selectedTimeWindowCells.size < 2) return;
+
+    const dayIds = Array.from(selectedTimeWindowCells);
+    const allDays = getAllDays();
+    
+    // Sort by day order
+    const sortedDayIds = dayIds.sort((a, b) => {
+      const aIndex = allDays.findIndex(day => day.id === a);
+      const bIndex = allDays.findIndex(day => day.id === b);
+      return aIndex - bIndex;
+    });
+
+    const firstDayId = sortedDayIds[0];
+    const colspan = sortedDayIds.length;
+
+    updateFullData(data => {
+      if (!data.timeWindowCells) data.timeWindowCells = [];
+
+      // Update first cell
+      const firstCellIndex = data.timeWindowCells.findIndex(cell => cell.dayId === firstDayId);
+      if (firstCellIndex !== -1) {
+        data.timeWindowCells[firstCellIndex] = {
+          ...data.timeWindowCells[firstCellIndex],
+          colspan,
+          customText: 'Continuous'
+        };
+      } else {
+        data.timeWindowCells.push({
+          id: `time-window-${firstDayId}`,
+          dayId: firstDayId,
+          value: 24,
+          colspan,
+          customText: 'Continuous'
+        });
+      }
+
+      // Mark other cells as merged placeholders
+      sortedDayIds.slice(1).forEach(dayId => {
+        const cellIndex = data.timeWindowCells!.findIndex(cell => cell.dayId === dayId);
+        if (cellIndex !== -1) {
+          data.timeWindowCells![cellIndex] = {
+            ...data.timeWindowCells![cellIndex],
+            isMergedPlaceholder: true
+          };
+        } else {
+          data.timeWindowCells!.push({
+            id: `time-window-${dayId}`,
+            dayId,
+            value: 24,
+            isMergedPlaceholder: true
+          });
+        }
+      });
+
+      return data;
+    });
+
+    setSelectedTimeWindowCells(new Set());
+  }, [selectedTimeWindowCells, getAllDays, updateFullData]);
+
+  const handleUnmergeTimeWindowCells = useCallback(() => {
+    if (selectedTimeWindowCells.size !== 1) return;
+
+    const dayId = Array.from(selectedTimeWindowCells)[0];
+    const cellData = fullData.timeWindowCells?.find(cell => cell.dayId === dayId);
+
+    if (!cellData?.colspan || cellData.colspan <= 1) return;
+
+    updateFullData(data => {
+      if (!data.timeWindowCells) return data;
+
+      const cellIndex = data.timeWindowCells.findIndex(cell => cell.dayId === dayId);
+      if (cellIndex === -1) return data;
+
+      const mergedCell = data.timeWindowCells[cellIndex];
+      const colspan = mergedCell.colspan || 1;
+
+      // Remove colspan and customText from the first cell
+      data.timeWindowCells[cellIndex] = {
+        ...mergedCell,
+        colspan: undefined,
+        customText: undefined
+      };
+
+      // Find and restore placeholder cells
+      const allDays = getAllDays();
+      const startIndex = allDays.findIndex(day => day.id === dayId);
+      
+      for (let i = 1; i < colspan; i++) {
+        const targetDayIndex = startIndex + i;
+        if (targetDayIndex < allDays.length) {
+          const targetDayId = allDays[targetDayIndex].id;
+          const placeholderIndex = data.timeWindowCells!.findIndex(cell => 
+            cell.dayId === targetDayId && cell.isMergedPlaceholder
+          );
+          
+          if (placeholderIndex !== -1) {
+            data.timeWindowCells![placeholderIndex] = {
+              ...data.timeWindowCells![placeholderIndex],
+              isMergedPlaceholder: undefined
+            };
+          }
+        }
+      }
+
+      return data;
+    });
+
+    setSelectedTimeWindowCells(new Set());
+  }, [selectedTimeWindowCells, fullData.timeWindowCells, updateFullData, getAllDays]);
+
+  // Bulk operations
+  const handleActivateSelectedCells = useCallback((visitType?: VisitType) => {
+    selectedActivityCells.forEach(cellKey => {
+      const [activityId, dayId] = cellKey.split(':');
+      updateActivityCell(activityId, dayId, {
+        isActive: true,
+        visitType
+      });
+    });
+    setSelectedActivityCells(new Set());
+  }, [selectedActivityCells, updateActivityCell]);
+
+  const handleClearSelectedCells = useCallback(() => {
+    selectedActivityCells.forEach(cellKey => {
+      const [activityId, dayId] = cellKey.split(':');
+      updateActivityCell(activityId, dayId, {
+        isActive: false,
+        visitType: undefined,
+        footnote: undefined,
+        customText: undefined
+      });
+    });
+    setSelectedActivityCells(new Set());
+  }, [selectedActivityCells, updateActivityCell]);
+
+  // Activity management
+  const handleAddActivity = useCallback(() => {
+    const newActivityId = `activity-${Date.now()}`;
+    const allDays = getAllDays();
+    
+    updateFullData(data => {
+      if (!data.activities) data.activities = [];
+      
+      const newActivity: ActivityData = {
+        id: newActivityId,
+        description: 'New Activity',
+        category: 'other',
+        cells: allDays.map(day => ({
+          dayId: day.id,
+          isActive: false
+        }))
+      };
+      
+      data.activities.push(newActivity);
+      return data;
+    });
+  }, [getAllDays, updateFullData]);
+
+  const handleActivityEdit = useCallback((activityId: string) => {
+    setEditingActivity(activityId);
+  }, []);
+
+  const handleActivitySave = useCallback((activityId: string, newDescription: string) => {
+    updateFullData(data => {
+      const activity = data.activities?.find(a => a.id === activityId);
+      if (activity) {
+        activity.description = newDescription;
+      }
+      return data;
+    });
     setEditingActivity(null);
-    setEditValues({});
-  };
+  }, [updateFullData]);
 
-  const handleActivityCancel = () => {
+  const handleActivityCancel = useCallback(() => {
     setEditingActivity(null);
-    setEditValues({});
-  };
+  }, []);
 
-  const handleAddActivity = () => {
-    const newActivity: ActivityData = {
-      id: generateId(),
-      description: 'New Activity',
-      category: 'other',
-      cells: data.periods.flatMap(period =>
-        period.cycles.flatMap(cycle =>
-          cycle.weeks.flatMap(week =>
-            week.days.map(day => ({
-              dayId: day.id,
-              isActive: false
-            }))
-          )
-        )
-      )
-    };
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    newData.activities = [...newData.activities, newActivity];
-    onDataChange(newData);
-  };
+  const handleActivityRemove = useCallback((activityId: string) => {
+    updateFullData(data => {
+      if (data.activities) {
+        data.activities = data.activities.filter(a => a.id !== activityId);
+      }
+      return data;
+    });
+  }, [updateFullData]);
 
-  // Activity Header Selection and Grouping Functions
-  const handleActivityHeaderClick = (activityId: string, event: React.MouseEvent) => {
-    if (event.shiftKey) {
-      // Shift+click for multi-selection
+  // Activity header selection
+  const handleActivityHeaderClick = useCallback((activityId: string, event: React.MouseEvent) => {
+    if (event.ctrlKey || event.metaKey) {
       setSelectedActivityHeaders(prev => {
         const newSet = new Set(prev);
         if (newSet.has(activityId)) {
@@ -292,1358 +629,551 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         return newSet;
       });
     } else {
-      // Regular click - clear selection and select this activity
       setSelectedActivityHeaders(new Set([activityId]));
     }
-  };
+  }, []);
 
-  const handleActivityHeaderRightClick = (e: React.MouseEvent, activityId: string) => {
+  const handleActivityHeaderRightClick = useCallback((e: React.MouseEvent, activityId: string) => {
     e.preventDefault();
     
-    // If right-clicking on a non-selected activity, clear selection and select this activity
     if (!selectedActivityHeaders.has(activityId)) {
       setSelectedActivityHeaders(new Set([activityId]));
     }
     
-    setActivityHeaderContextMenuState({
-      isOpen: true,
-      x: e.clientX,
-      y: e.clientY,
-      clickedActivityId: activityId
-    });
-  };
-
-  const handleActivityGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
-    e.preventDefault();
-    const group = data.activityGroups?.find(g => g.id === groupId);
-    setGroupHeaderContextMenu({
+    setActivityHeaderContextMenu({
       isOpen: true,
       position: { x: e.clientX, y: e.clientY },
-      groupId: groupId,
-      groupName: group?.name || 'Unknown Group'
+      clickedActivityId: activityId
     });
-  };
+  }, [selectedActivityHeaders]);
 
-  const generateGroupId = () => `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-  const getNextGroupNumber = () => {
-    const existingNumbers = (data.activityGroups || [])
-      .map(group => {
-        const match = group.name.match(/^Group (\d+)$/);
-        return match ? parseInt(match[1]) : 0;
-      })
-      .filter(num => num > 0);
-    
-    return existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-  };
-
-  const groupSelectedActivityHeaders = () => {
+  // Activity grouping
+  const handleGroupActivities = useCallback(() => {
     if (selectedActivityHeaders.size < 2) return;
-    
-    const groupId = generateGroupId();
-    const groupNumber = getNextGroupNumber();
-    const defaultColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-    const defaultColor = defaultColors[(data.activityGroups?.length || 0) % defaultColors.length];
-    
-    const newGroup: ActivityGroup = {
-      id: groupId,
-      name: `Group ${groupNumber}`,
-      color: defaultColor,
-      activityIds: Array.from(selectedActivityHeaders)
-    };
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
-    // Update activities with group ID
-    newData.activities = newData.activities.map(activity => 
-      selectedActivityHeaders.has(activity.id) 
-        ? { ...activity, groupId }
-        : activity
-    );
-    
-    // Add new group
-    newData.activityGroups = [...newData.activityGroups, newGroup];
-    
-    onDataChange(newData);
-    
-    // Clear selection
-    setSelectedActivityHeaders(new Set());
-  };
 
-  const ungroupActivityGroup = (groupId: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    if (!newData.activityGroups) newData.activityGroups = [];
+    const groupId = `group-${Date.now()}`;
+    const selectedActivityIds = Array.from(selectedActivityHeaders);
     
-    // Remove group ID from activities
-    newData.activities = newData.activities.map(activity => 
-      activity.groupId === groupId 
-        ? { ...activity, groupId: undefined }
-        : activity
-    );
-    
-    // Remove group
-    newData.activityGroups = newData.activityGroups.filter(group => group.id !== groupId);
-    
-    onDataChange(newData);
-    
-    // Remove from collapsed groups if it was collapsed
-    setCollapsedGroups(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(groupId);
-      return newSet;
-    });
-  };
-
-  const renameActivityGroup = (groupId: string, newName: string) => {
-    const newData = { ...data };
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
-    newData.activityGroups = newData.activityGroups.map(group => 
-      group.id === groupId 
-        ? { ...group, name: newName }
-        : group
-    );
-    
-    onDataChange(newData);
-  };
-
-  const changeActivityGroupColor = (groupId: string, newColor: string) => {
-    const newData = { ...data };
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
-    newData.activityGroups = newData.activityGroups.map(group => 
-      group.id === groupId 
-        ? { ...group, color: newColor }
-        : group
-    );
-    
-    onDataChange(newData);
-  };
-
-  const toggleGroupCollapse = (groupId: string) => {
-    setCollapsedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
-      } else {
-        newSet.add(groupId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleRemoveActivity = (activityId: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.filter(activity => activity.id !== activityId);
-    onDataChange(newData);
-  };
-
-  const getTotalDays = () => {
-    return data.periods.reduce((total, period) => {
-      return total + period.cycles.reduce((cycleTotal, cycle) => {
-        return cycleTotal + cycle.weeks.reduce((weekTotal, week) => {
-          return weekTotal + week.days.length;
-        }, 0);
-      }, 0);
-    }, 0);
-  };
-
-  const handleAddItem = (type: EditableItemType, id: string, side: 'left' | 'right') => {
-    const newData = { ...data };
-    
-    if (type === 'period') {
-      const periodIndex = newData.periods.findIndex(p => p.id === id);
-      const insertIndex = side === 'right' ? periodIndex + 1 : periodIndex;
-      const newPeriod: Period = {
-        id: generateId(),
-        name: `Period ${newData.periods.length + 1}`,
-        cycles: [{
-          id: generateId(),
-          name: 'Cycle 1',
-          weeks: [{
-            id: generateId(),
-            name: 'Week 1',
-            days: [{
-              id: generateId(),
-              name: 'Day 1'
-            }]
-          }]
-        }]
+    updateFullData(data => {
+      // Create new group
+      if (!data.activityGroups) data.activityGroups = [];
+      
+      const newGroup: ActivityGroup = {
+        id: groupId,
+        name: 'New Group',
+        color: GROUP_COLORS[data.activityGroups.length % GROUP_COLORS.length],
+        activityIds: selectedActivityIds
       };
-      newData.periods.splice(insertIndex, 0, newPeriod);
-    } else if (type === 'cycle') {
-      for (const period of newData.periods) {
-        const cycleIndex = period.cycles.findIndex(c => c.id === id);
-        if (cycleIndex !== -1) {
-          const insertIndex = side === 'right' ? cycleIndex + 1 : cycleIndex;
-          const newCycle: Cycle = {
-            id: generateId(),
-            name: `Cycle ${period.cycles.length + 1}`,
-            weeks: [{
-              id: generateId(),
-              name: 'Week 1',
-              days: [{
-                id: generateId(),
-                name: 'Day 1'
-              }]
-            }]
-          };
-          period.cycles.splice(insertIndex, 0, newCycle);
-          break;
-        }
-      }
-    } else if (type === 'week') {
-      for (const period of newData.periods) {
-        for (const cycle of period.cycles) {
-          const weekIndex = cycle.weeks.findIndex(w => w.id === id);
-          if (weekIndex !== -1) {
-            const insertIndex = side === 'right' ? weekIndex + 1 : weekIndex;
-            const newWeek: Week = {
-              id: generateId(),
-              name: `Week ${cycle.weeks.length + 1}`,
-              days: [{
-                id: generateId(),
-                name: 'Day 1'
-              }]
-            };
-            cycle.weeks.splice(insertIndex, 0, newWeek);
-            break;
+      
+      data.activityGroups.push(newGroup);
+      
+      // Update activities to reference the group
+      if (data.activities) {
+        data.activities.forEach(activity => {
+          if (selectedActivityIds.includes(activity.id)) {
+            activity.groupId = groupId;
           }
-        }
-      }
-    } else if (type === 'day') {
-      for (const period of newData.periods) {
-        for (const cycle of period.cycles) {
-          for (const week of cycle.weeks) {
-            const dayIndex = week.days.findIndex(d => d.id === id);
-            if (dayIndex !== -1) {
-              const insertIndex = side === 'right' ? dayIndex + 1 : dayIndex;
-              const newDay: Day = {
-                id: generateId(),
-                name: `Day ${week.days.length + 1}`
-              };
-              week.days.splice(insertIndex, 0, newDay);
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    onDataChange(newData);
-  };
-
-  const handleCellClick = (item: any, type: EditableItemType) => {
-    setEditContext({ item, type });
-  };
-
-  // Function to open the VisitLinkPanel
-  const openVisitLinkPanel = (dayId: string) => {
-    setVisitLinkPanelState({ isOpen: true, dayId });
-  };
-
-  // Function to close the VisitLinkPanel
-  const closeVisitLinkPanel = () => {
-    setVisitLinkPanelState({ isOpen: false, dayId: null });
-  };
-
-  // Helper to get all day objects for the VisitLinkPanel
-  const getAllDayObjects = (): Day[] => {
-    const allDayObjects: Day[] = [];
-    data.periods.forEach(period => {
-      period.cycles.forEach(cycle => {
-        cycle.weeks.forEach(week => {
-          allDayObjects.push(...week.days);
         });
-      });
+      }
+      
+      return data;
     });
-    return allDayObjects;
-  };
-
-  // Enhanced drop handler with success animation
-  const handleDropWithAnimation = (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => {
-    console.log('🚀 Starting drag drop operation');
-    logActivityState('BEFORE DROP');
-    handleDrop(targetId, targetType, position);
-    console.log('✅ Drop completed, data structure updated');
-    showSuccessAnimation();
-  };
-
-  const handleEditSave = (updatedItem: any) => {
-    const newData = { ...data };
     
-    // Find and update the item in the data structure
-    if (editContext?.type === 'period') {
-      const periodIndex = newData.periods.findIndex(p => p.id === updatedItem.id);
-      if (periodIndex !== -1) {
-        newData.periods[periodIndex] = { ...newData.periods[periodIndex], ...updatedItem };
-      }
-    } else if (editContext?.type === 'cycle') {
-      for (const period of newData.periods) {
-        const cycleIndex = period.cycles.findIndex(c => c.id === updatedItem.id);
-        if (cycleIndex !== -1) {
-          period.cycles[cycleIndex] = { ...period.cycles[cycleIndex], ...updatedItem };
-          break;
-        }
-      }
-    } else if (editContext?.type === 'week') {
-      for (const period of newData.periods) {
-        for (const cycle of period.cycles) {
-          const weekIndex = cycle.weeks.findIndex(w => w.id === updatedItem.id);
-          if (weekIndex !== -1) {
-            cycle.weeks[weekIndex] = { ...cycle.weeks[weekIndex], ...updatedItem };
-            break;
+    setSelectedActivityHeaders(new Set());
+  }, [selectedActivityHeaders, updateFullData]);
+
+  const handleUngroupActivities = useCallback((groupId: string) => {
+    updateFullData(data => {
+      // Remove group reference from activities
+      if (data.activities) {
+        data.activities.forEach(activity => {
+          if (activity.groupId === groupId) {
+            delete activity.groupId;
           }
-        }
-      }
-    } else if (editContext?.type === 'day') {
-      for (const period of newData.periods) {
-        for (const cycle of period.cycles) {
-          for (const week of cycle.weeks) {
-            const dayIndex = week.days.findIndex(d => d.id === updatedItem.id);
-            if (dayIndex !== -1) {
-              week.days[dayIndex] = { ...week.days[dayIndex], ...updatedItem };
-              break;
-            }
-          }
-        }
-      }
-    } else if (editContext?.type === 'time-relative-cell') {
-      if (!newData.timeRelativeCells) newData.timeRelativeCells = [];
-      const cellIndex = newData.timeRelativeCells.findIndex(c => c.dayId === updatedItem.id);
-      if (cellIndex !== -1) {
-        newData.timeRelativeCells[cellIndex] = { ...newData.timeRelativeCells[cellIndex], value: updatedItem.value };
-      } else {
-        newData.timeRelativeCells.push({
-          id: `time-relative-${updatedItem.id}`,
-          dayId: updatedItem.id,
-          value: updatedItem.value
         });
       }
-    } else if (editContext?.type === 'time-window-cell') {
-      if (!newData.timeWindowCells) newData.timeWindowCells = [];
-      const cellIndex = newData.timeWindowCells.findIndex(c => c.dayId === updatedItem.id);
-      if (cellIndex !== -1) {
-        newData.timeWindowCells[cellIndex] = { ...newData.timeWindowCells[cellIndex], value: updatedItem.value };
-      } else {
-        newData.timeWindowCells.push({
-          id: `time-window-${updatedItem.id}`,
-          dayId: updatedItem.id,
-          value: updatedItem.value
-        });
+      
+      // Remove group
+      if (data.activityGroups) {
+        data.activityGroups = data.activityGroups.filter(g => g.id !== groupId);
       }
-    } else if (editContext?.type === 'time-of-day-cell') {
-      if (!newData.timeOfDayCells) newData.timeOfDayCells = [];
-      const cellIndex = newData.timeOfDayCells.findIndex(c => c.dayId === updatedItem.id);
-      if (cellIndex !== -1) {
-        newData.timeOfDayCells[cellIndex] = { ...newData.timeOfDayCells[cellIndex], value: updatedItem.value };
-      } else {
-        newData.timeOfDayCells.push({
-          id: `time-of-day-${updatedItem.id}`,
-          dayId: updatedItem.id,
-          value: updatedItem.value
-        });
+      
+      return data;
+    });
+  }, [updateFullData]);
+
+  const handleRenameGroup = useCallback((groupId: string, newName: string) => {
+    updateFullData(data => {
+      const group = data.activityGroups?.find(g => g.id === groupId);
+      if (group) {
+        group.name = newName;
       }
+      return data;
+    });
+  }, [updateFullData]);
+
+  const handleChangeGroupColor = useCallback((groupId: string, newColor: string) => {
+    updateFullData(data => {
+      const group = data.activityGroups?.find(g => g.id === groupId);
+      if (group) {
+        group.color = newColor;
+      }
+      return data;
+    });
+  }, [updateFullData]);
+
+  // Static cell operations
+  const handleStaticCellClick = useCallback((dayId: string, content: string, type: EditableItemType) => {
+    // Find the item based on type and dayId
+    let item: any = null;
+    
+    if (type === 'time-relative-cell') {
+      item = fullData.timeRelativeCells?.find(cell => cell.dayId === dayId) || {
+        id: `time-relative-${dayId}`,
+        dayId,
+        value: parseInt(content) || 24
+      };
+    } else if (type === 'time-window-cell') {
+      item = fullData.timeWindowCells?.find(cell => cell.dayId === dayId) || {
+        id: `time-window-${dayId}`,
+        dayId,
+        value: parseInt(content) || 24
+      };
+    } else if (type === 'time-of-day-cell') {
+      item = fullData.timeOfDayCells?.find(cell => cell.dayId === dayId) || {
+        id: `time-of-day-${dayId}`,
+        dayId,
+        value: content || 'Morning'
+      };
     }
+    
+    if (item) {
+      setEditContext({
+        type,
+        item
+      });
+    }
+  }, [fullData]);
 
-    onDataChange(newData);
-    setEditContext(null);
-  };
-
-  const handleDelete = () => {
+  // Edit panel operations
+  const handleEditSave = useCallback((updatedItem: any) => {
     if (!editContext) return;
 
-    const newData = { ...data };
-    
-    if (editContext.type === 'period') {
-      newData.periods = newData.periods.filter(p => p.id !== editContext.item.id);
-    } else if (editContext.type === 'cycle') {
-      for (const period of newData.periods) {
-        period.cycles = period.cycles.filter(c => c.id !== editContext.item.id);
-      }
-    } else if (editContext.type === 'week') {
-      for (const period of newData.periods) {
-        for (const cycle of period.cycles) {
-          cycle.weeks = cycle.weeks.filter(w => w.id !== editContext.item.id);
+    updateFullData(data => {
+      if (editContext.type === 'time-relative-cell') {
+        if (!data.timeRelativeCells) data.timeRelativeCells = [];
+        const index = data.timeRelativeCells.findIndex(cell => cell.id === updatedItem.id);
+        if (index !== -1) {
+          data.timeRelativeCells[index] = updatedItem;
+        } else {
+          data.timeRelativeCells.push(updatedItem);
+        }
+      } else if (editContext.type === 'time-window-cell') {
+        if (!data.timeWindowCells) data.timeWindowCells = [];
+        const index = data.timeWindowCells.findIndex(cell => cell.id === updatedItem.id);
+        if (index !== -1) {
+          data.timeWindowCells[index] = updatedItem;
+        } else {
+          data.timeWindowCells.push(updatedItem);
+        }
+      } else if (editContext.type === 'time-of-day-cell') {
+        if (!data.timeOfDayCells) data.timeOfDayCells = [];
+        const index = data.timeOfDayCells.findIndex(cell => cell.id === updatedItem.id);
+        if (index !== -1) {
+          data.timeOfDayCells[index] = updatedItem;
+        } else {
+          data.timeOfDayCells.push(updatedItem);
         }
       }
-    } else if (editContext.type === 'day') {
-      for (const period of newData.periods) {
-        for (const cycle of period.cycles) {
-          for (const week of cycle.weeks) {
-            week.days = week.days.filter(d => d.id !== editContext.item.id);
-          }
-        }
-      }
-    }
+      return data;
+    });
 
-    onDataChange(newData);
     setEditContext(null);
-  };
+  }, [editContext, updateFullData]);
 
-  // New function to handle activity cell clicks with selection logic
-  const handleActivityCellClick = (activityId: string, dayId: string, event: React.MouseEvent) => {
-    const cellKey = getCellKey(activityId, dayId);
-    
-    if (event.shiftKey) {
-      // Shift+click for range selection
-      if (!selectionStartCell) {
-        // Start new selection
-        setSelectionStartCell({ activityId, dayId });
-        setSelectedActivityCells(new Set([cellKey]));
-      } else {
-        // Complete range selection
-        const startIndices = getActivityDayIndices(selectionStartCell.activityId, selectionStartCell.dayId);
-        const endIndices = getActivityDayIndices(activityId, dayId);
-        
-        if (startIndices && endIndices) {
-          const newSelection = new Set<string>();
-          
-          const minActivityIndex = Math.min(startIndices.activityIndex, endIndices.activityIndex);
-          const maxActivityIndex = Math.max(startIndices.activityIndex, endIndices.activityIndex);
-          const minDayIndex = Math.min(startIndices.dayIndex, endIndices.dayIndex);
-          const maxDayIndex = Math.max(startIndices.dayIndex, endIndices.dayIndex);
-          
-          // Get all days for indexing
-          const allDays: Day[] = [];
-          data.periods.forEach(period => {
-            period.cycles.forEach(cycle => {
-              cycle.weeks.forEach(week => {
-                allDays.push(...week.days);
-              });
-            });
-          });
-          
-          // Select rectangular range
-          for (let aIdx = minActivityIndex; aIdx <= maxActivityIndex; aIdx++) {
-            for (let dIdx = minDayIndex; dIdx <= maxDayIndex; dIdx++) {
-              if (data.activities && data.activities[aIdx] && allDays[dIdx]) {
-                newSelection.add(getCellKey(data.activities[aIdx].id, allDays[dIdx].id));
-              }
-            }
-          }
-          
-          setSelectedActivityCells(newSelection);
-        }
-      }
+  const handleEditDelete = useCallback(() => {
+    if (!editContext) return;
+    // For static cells, we don't delete them, just reset to default values
+    setEditContext(null);
+  }, [editContext]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditContext(null);
+  }, []);
+
+  // Timeline item operations
+  const handleItemClick = useCallback((item: any, type: EditableItemType) => {
+    if (headerManagement.isFocusMode) {
+      // If already in focus mode, exit focus mode
+      headerManagement.unfocusHeader();
     } else {
-      // Regular click - clear selection and toggle cell
-      setSelectedActivityCells(new Set());
-      setSelectionStartCell(null);
-      
-      // Get all linked visits for this day
-      const linkedVisits = getLinkedVisits(dayId);
-      
-      const newData = { ...data };
-      if (!newData.activities) newData.activities = [];
-      
-      newData.activities = newData.activities.map(activity => {
-        if (activity.id === activityId) {
-          return {
-            ...activity,
-            cells: activity.cells.map(cell => {
-              // Update the clicked cell and all linked cells
-              if (cell.dayId === dayId || linkedVisits.includes(cell.dayId)) {
-                return { 
-                  ...cell, 
-                  isActive: !cell.isActive,
-                  // Clear visit type and footnote when deactivating
-                  visitType: cell.isActive ? undefined : cell.visitType,
-                  footnote: cell.isActive ? undefined : cell.footnote,
-                  customText: cell.isActive ? undefined : cell.customText
-                };
-              }
-              return cell;
-            })
-          };
-        }
-        return activity;
-      });
-      
-      onDataChange(newData);
+      // Enter focus mode for this item
+      headerManagement.focusHeader(item.id, type);
     }
-  };
+  }, [headerManagement]);
 
-  const handleActivityCellRightClick = (e: React.MouseEvent, activityId: string, dayId: string) => {
-    e.preventDefault();
-    
-    const cellKey = getCellKey(activityId, dayId);
-    
-    // If right-clicking on a non-selected cell, clear selection and select this cell
-    if (!selectedActivityCells.has(cellKey)) {
-      setSelectedActivityCells(new Set([cellKey]));
-      setSelectionStartCell({ activityId, dayId });
-    }
-    
-    setContextMenuState({
-      isOpen: true,
-      x: e.clientX,
-      y: e.clientY,
-      clickedCell: { activityId, dayId },
-      clickedTimeWindowCell: null
-    });
-  };
+  const handleItemHover = useCallback((type: EditableItemType, id: string | null) => {
+    setHoveredItems(prev => ({ ...prev, [type]: id }));
+  }, []);
 
-  const handleVisitTypeSelect = (visitType: VisitType | undefined) => {
-    if (!visitTypeSelector) return;
-    
-    // Get all linked visits for this day
-    const linkedVisits = getLinkedVisits(visitTypeSelector.dayId);
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
-      if (activity.id === visitTypeSelector.activityId) {
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            // Update the selected cell and all linked cells
-            if (cell.dayId === visitTypeSelector.dayId || linkedVisits.includes(cell.dayId)) {
-              return { ...cell, visitType, isActive: visitType ? true : cell.isActive };
-            }
-            return cell;
-          })
-        };
-      }
-      return activity;
-    });
-    
-    onDataChange(newData);
-    
-    setVisitTypeSelector(null);
-  };
+  const handleAddItem = useCallback((type: EditableItemType, id: string, side: 'left' | 'right') => {
+    // Implementation for adding new timeline items
+    console.log('Add item:', type, id, side);
+  }, []);
 
-  // New function to handle custom text changes
-  const handleActivityCellCustomTextChange = (activityId: string, dayId: string, newText: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
-      if (activity.id === activityId) {
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            if (cell.dayId === dayId) {
-              return { ...cell, customText: newText };
-            }
-            return cell;
-          })
-        };
-      }
-      return activity;
-    });
-    
-    onDataChange(newData);
-  };
-
-  // New function to merge selected cells
-  const mergeSelectedCells = () => {
-    if (selectedActivityCells.size < 2) return;
-    
-    // Parse selected cells to get activity and day indices
-    const selectedCellsData = Array.from(selectedActivityCells).map(key => {
-      const { activityId, dayId } = parseCellKey(key);
-      const indices = getActivityDayIndices(activityId, dayId);
-      return { activityId, dayId, indices };
-    }).filter(item => item.indices !== null);
-    
-    if (selectedCellsData.length === 0) return;
-    
-    // Find the bounds of the selection
-    const activityIndices = selectedCellsData.map(item => item.indices!.activityIndex);
-    const dayIndices = selectedCellsData.map(item => item.indices!.dayIndex);
-    
-    const minActivityIndex = Math.min(...activityIndices);
-    const maxActivityIndex = Math.max(...activityIndices);
-    const minDayIndex = Math.min(...dayIndices);
-    const maxDayIndex = Math.max(...dayIndices);
-    
-    const colspan = maxDayIndex - minDayIndex + 1;
-    const rowspan = maxActivityIndex - minActivityIndex + 1;
-    
-    // Get all days for indexing
-    const allDays: Day[] = [];
-    data.periods.forEach(period => {
-      period.cycles.forEach(cycle => {
-        cycle.weeks.forEach(week => {
-          allDays.push(...week.days);
-        });
-      });
-    });
-    
-    // Find the top-left cell (main cell)
-    const mainActivityId = data.activities![minActivityIndex].id;
-    const mainDayId = allDays[minDayIndex].id;
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map((activity, activityIndex) => {
-      return {
-        ...activity,
-        cells: activity.cells.map((cell, cellIndex) => {
-          const dayIndex = allDays.findIndex(d => d.id === cell.dayId);
-          
-          // Check if this cell is within the merge area
-          if (activityIndex >= minActivityIndex && activityIndex <= maxActivityIndex &&
-              dayIndex >= minDayIndex && dayIndex <= maxDayIndex) {
-            
-            if (activity.id === mainActivityId && cell.dayId === mainDayId) {
-              // This is the main cell
-              return {
-                ...cell,
-                colspan,
-                rowspan,
-                customText: cell.customText || 'Continuous',
-                isActive: true
-              };
-            } else {
-              // This is a placeholder cell
-              return {
-                ...cell,
-                isMergedPlaceholder: true,
-                isActive: false,
-                visitType: undefined,
-                footnote: undefined,
-                customText: undefined
-              };
-            }
-          }
-          
-          return cell;
-        })
-      };
-    });
-    
-    onDataChange(newData);
-    
-    // Clear selection
-    setSelectedActivityCells(new Set());
-    setSelectionStartCell(null);
-  };
-
-  // New function to unmerge a cell
-  const unmergeCell = (activityId: string, dayId: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
-      if (activity.id === activityId) {
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            if (cell.dayId === dayId) {
-              // Reset the main merged cell
-              return {
-                ...cell,
-                colspan: undefined,
-                rowspan: undefined
-              };
-            }
-            return cell;
-          })
-        };
-      } else {
-        // Reset any placeholder cells that were part of this merge
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            if (cell.isMergedPlaceholder) {
-              // We need to check if this placeholder was part of the unmerged cell
-              // For simplicity, we'll reset all placeholders - in a real app you'd track this more precisely
-              return {
-                ...cell,
-                isMergedPlaceholder: false
-              };
-            }
-            return cell;
-          })
-        };
-      }
-    });
-    
-    onDataChange(newData);
-  };
-
-  // New function to activate selected cells
-  const activateSelectedCells = (visitType?: VisitType) => {
-    if (selectedActivityCells.size === 0) return;
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
-      return {
-        ...activity,
-        cells: activity.cells.map(cell => {
-          const cellKey = getCellKey(activity.id, cell.dayId);
-          if (selectedActivityCells.has(cellKey)) {
-            return {
-              ...cell,
-              isActive: true,
-              visitType,
-              footnote: undefined,
-              customText: undefined
-            };
-          }
-          return cell;
-        })
-      };
-    });
-    
-    onDataChange(newData);
-    
-    // Clear selection
-    setSelectedActivityCells(new Set());
-    setSelectionStartCell(null);
-  };
-
-  // New function to clear selected cells
-  const clearSelectedCells = () => {
-    if (selectedActivityCells.size === 0) return;
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
-      return {
-        ...activity,
-        cells: activity.cells.map(cell => {
-          const cellKey = getCellKey(activity.id, cell.dayId);
-          if (selectedActivityCells.has(cellKey)) {
-            return {
-              ...cell,
-              isActive: false,
-              visitType: undefined,
-              footnote: undefined,
-              customText: undefined
-            };
-          }
-          return cell;
-        })
-      };
-    });
-    
-    onDataChange(newData);
-    
-    // Clear selection
-    setSelectedActivityCells(new Set());
-    setSelectionStartCell(null);
-  };
-
-  // New function to handle adding text to a single cell
-  const handleAddTextToSingleCell = () => {
-    if (!contextMenuState.clickedCell) return;
-    
-    setTextInputState({
-      isOpen: true,
-      position: { x: contextMenuState.x, y: contextMenuState.y },
-      activityId: contextMenuState.clickedCell.activityId,
-      dayId: contextMenuState.clickedCell.dayId
-    });
-  };
-
-  // Function to handle text input for single cell
-  const handleTextInputForCell = (text: string) => {
-    if (!textInputState.activityId || !textInputState.dayId) return;
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
-      if (activity.id === textInputState.activityId) {
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            if (cell.dayId === textInputState.dayId) {
-              return {
-                ...cell,
-                customText: text.trim() || undefined,
-                isActive: text.trim() ? true : cell.isActive // Activate cell if text is added
-              };
-            }
-            return cell;
-          })
-        };
-      }
-      return activity;
-    });
-    
-    onDataChange(newData);
-    
-    setTextInputState({
-      isOpen: false,
-      position: { x: 0, y: 0 },
-      activityId: '',
-      dayId: ''
-    });
-  };
-
-  const handleCommentClick = (
-    e: React.MouseEvent,
-    cellId: string,
-    cellType: 'activity' | 'period' | 'cycle' | 'week' | 'day'
-  ) => {
-    e.stopPropagation();
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    openCommentModal(cellId, cellType, {
+  // Comment operations
+  const handleCommentClick = useCallback((e: React.MouseEvent, cellId: string, cellType: 'activity' | 'period' | 'cycle' | 'week' | 'day') => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    commentsHook.openCommentModal(cellId, cellType, {
       x: rect.left + rect.width / 2,
-      y: rect.top
+      y: rect.bottom + 5
     });
-  };
+  }, [commentsHook]);
 
-  const getActivityCell = (activityId: string, dayId: string): ActivityCell | undefined => {
-    const activity = data.activities?.find(a => a.id === activityId);
-    return activity?.cells.find(c => c.dayId === dayId);
-  };
-
-  // Create hover state for timeline items
-  const hoveredItems = {
-    period: hoveredCell?.type === 'period' ? hoveredCell.id : null,
-    cycle: hoveredCell?.type === 'cycle' ? hoveredCell.id : null,
-    week: hoveredCell?.type === 'week' ? hoveredCell.id : null,
-    day: hoveredCell?.type === 'day' ? hoveredCell.id : null
-  };
-
-  const handleItemHover = (type: EditableItemType, id: string | null) => {
-    if (id) {
-      setHoveredCell({ type, id, side: 'left' });
-    } else {
-      setHoveredCell(null);
-    }
-  };
-
-  const handleStaticCellClick = (dayId: string, content: string, type: EditableItemType) => {
-    if (type === 'time-window-cell') {
-      // Don't open edit context for time window cells, they have their own selection logic
-      return;
-    }
+  // Visit type and text operations
+  const handleSetVisitTypeForSingleCell = useCallback(() => {
+    if (selectedActivityCells.size !== 1) return;
     
-    if (type !== 'time-window-cell') {
-      // Create a mock item for the edit context
-      const item = {
-        id: dayId,
-        value: type === 'time-relative-cell' || type === 'time-window-cell' 
-          ? parseInt(content.replace(/[^\d]/g, '')) || 0
-          : content.replace('±', '').replace('h', '')
-      };
-      
-      setEditContext({ item, type });
-    }
-  };
-
-  // New function to handle time window cell clicks with selection logic
-  const handleTimeWindowCellClick = (dayId: string, event: React.MouseEvent) => {
-    if (event.shiftKey) {
-      // Shift+click for range selection
-      if (!timeWindowSelectionStart) {
-        // Start new selection
-        setTimeWindowSelectionStart(dayId);
-        setSelectedTimeWindowCells(new Set([dayId]));
-      } else {
-        // Complete range selection
-        const allDays: string[] = [];
-        data.periods.forEach(period => {
-          period.cycles.forEach(cycle => {
-            cycle.weeks.forEach(week => {
-              week.days.forEach(day => {
-                allDays.push(day.id);
-              });
-            });
-          });
-        });
-        
-        const startIndex = allDays.indexOf(timeWindowSelectionStart);
-        const endIndex = allDays.indexOf(dayId);
-        
-        if (startIndex !== -1 && endIndex !== -1) {
-          const newSelection = new Set<string>();
-          const minIndex = Math.min(startIndex, endIndex);
-          const maxIndex = Math.max(startIndex, endIndex);
-          
-          for (let i = minIndex; i <= maxIndex; i++) {
-            newSelection.add(allDays[i]);
-          }
-          
-          setSelectedTimeWindowCells(newSelection);
-        }
-      }
-    } else {
-      // Regular click - clear selection
-      setSelectedTimeWindowCells(new Set());
-      setTimeWindowSelectionStart(null);
-    }
-  };
-
-  const handleTimeWindowCellRightClick = (e: React.MouseEvent, dayId: string) => {
-    e.preventDefault();
+    const cellKey = Array.from(selectedActivityCells)[0];
+    const [activityId, dayId] = cellKey.split(':');
+    const cellData = getActivityCell(activityId, dayId);
     
-    // If right-clicking on a non-selected cell, clear selection and select this cell
-    if (!selectedTimeWindowCells.has(dayId)) {
-      setSelectedTimeWindowCells(new Set([dayId]));
-      setTimeWindowSelectionStart(dayId);
-    }
-    
-    setContextMenuState({
+    setVisitTypeSelector({
       isOpen: true,
-      x: e.clientX,
-      y: e.clientY,
-      clickedCell: null,
-      clickedTimeWindowCell: dayId
+      position: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      cellKey,
+      currentVisitType: cellData?.visitType
     });
-  };
+  }, [selectedActivityCells, getActivityCell]);
 
-  // Function to merge selected time window cells
-  const mergeSelectedTimeWindowCells = () => {
-    if (selectedTimeWindowCells.size < 2) return;
+  const handleAddTextToSingleCell = useCallback(() => {
+    if (selectedActivityCells.size !== 1) return;
     
-    // Get all days in order
-    const allDays: string[] = [];
-    data.periods.forEach(period => {
-      period.cycles.forEach(cycle => {
-        cycle.weeks.forEach(week => {
-          week.days.forEach(day => {
-            allDays.push(day.id);
-          });
-        });
-      });
+    const cellKey = Array.from(selectedActivityCells)[0];
+    const [activityId, dayId] = cellKey.split(':');
+    const cellData = getActivityCell(activityId, dayId);
+    
+    setTextInputModal({
+      isOpen: true,
+      position: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+      cellKey,
+      currentText: cellData?.customText
     });
-    
-    // Find the bounds of the selection
-    const selectedDayIndices = Array.from(selectedTimeWindowCells).map(dayId => allDays.indexOf(dayId)).filter(index => index !== -1);
-    
-    if (selectedDayIndices.length === 0) return;
-    
-    const minIndex = Math.min(...selectedDayIndices);
-    const maxIndex = Math.max(...selectedDayIndices);
-    const colspan = maxIndex - minIndex + 1;
-    
-    // Find the main cell (leftmost)
-    const mainDayId = allDays[minIndex];
-    
-    // Update time window cells
-    const newData = { ...data };
-    if (!newData.timeWindowCells) newData.timeWindowCells = [];
-    
-    // Update existing cells or create new ones
-    const updatedCells = [...newData.timeWindowCells];
-    
-    // Set main cell with colspan
-    const mainCellIndex = updatedCells.findIndex(cell => cell.dayId === mainDayId);
-    if (mainCellIndex !== -1) {
-      updatedCells[mainCellIndex] = {
-        ...updatedCells[mainCellIndex],
-        colspan,
-        customText: 'Continuous'
-      };
-    } else {
-      updatedCells.push({
-        id: `time-window-${mainDayId}`,
-        dayId: mainDayId,
-        value: 24,
-        colspan,
-        customText: 'Continuous'
-      });
-    }
-    
-    // Set placeholder cells
-    for (let i = minIndex + 1; i <= maxIndex; i++) {
-      const dayId = allDays[i];
-      const cellIndex = updatedCells.findIndex(cell => cell.dayId === dayId);
-      if (cellIndex !== -1) {
-        updatedCells[cellIndex] = {
-          ...updatedCells[cellIndex],
-          isMergedPlaceholder: true
-        };
-      } else {
-        updatedCells.push({
-          id: `time-window-${dayId}`,
-          dayId: dayId,
-          value: 24,
-          isMergedPlaceholder: true
-        });
-      }
-    }
-    
-    newData.timeWindowCells = updatedCells;
-    onDataChange(newData);
-    
-    // Clear selection
-    setSelectedTimeWindowCells(new Set());
-    setTimeWindowSelectionStart(null);
-  };
+  }, [selectedActivityCells, getActivityCell]);
 
-  // Function to unmerge a time window cell
-  const unmergeTimeWindowCell = (dayId: string) => {
-    const newData = { ...data };
-    if (!newData.timeWindowCells) return;
+  const handleVisitTypeSelect = useCallback((visitType: VisitType | undefined) => {
+    if (!visitTypeSelector.cellKey) return;
     
-    // Find the main cell
-    const mainCell = newData.timeWindowCells.find(cell => cell.dayId === dayId && cell.colspan);
-    if (!mainCell) return;
+    const [activityId, dayId] = visitTypeSelector.cellKey.split(':');
+    updateActivityCell(activityId, dayId, { visitType });
     
-    // Reset the main cell
-    const updatedCells = newData.timeWindowCells.map(cell => {
-      if (cell.dayId === dayId) {
-        return {
-          ...cell,
-          colspan: undefined,
-          customText: undefined
-        };
-      }
-      // Reset any placeholder cells
-      if (cell.isMergedPlaceholder) {
-        return {
-          ...cell,
-          isMergedPlaceholder: false
-        };
-      }
-      return cell;
+    setVisitTypeSelector(prev => ({ ...prev, isOpen: false }));
+  }, [visitTypeSelector.cellKey, updateActivityCell]);
+
+  const handleTextSave = useCallback((text: string) => {
+    if (!textInputModal.cellKey) return;
+    
+    const [activityId, dayId] = textInputModal.cellKey.split(':');
+    updateActivityCell(activityId, dayId, { customText: text || undefined });
+    
+    setTextInputModal(prev => ({ ...prev, isOpen: false }));
+  }, [textInputModal.cellKey, updateActivityCell]);
+
+  // Custom text change for merged cells
+  const handleActivityCellCustomTextChange = useCallback((activityId: string, dayId: string, newText: string) => {
+    updateActivityCell(activityId, dayId, { customText: newText });
+  }, [updateActivityCell]);
+
+  const handleTimeWindowCellCustomTextChange = useCallback((dayId: string, newText: string) => {
+    updateTimeWindowCell(dayId, { customText: newText });
+  }, [updateTimeWindowCell]);
+
+  // Visit link operations
+  const handleOpenVisitLinkPanel = useCallback((dayId: string) => {
+    setVisitLinkPanel({
+      isOpen: true,
+      currentDayId: dayId
     });
-    
-    newData.timeWindowCells = updatedCells;
-    onDataChange(newData);
-  };
+  }, []);
 
-  // Function to handle custom text changes for time window cells
-  const handleTimeWindowCellCustomTextChange = (dayId: string, newText: string) => {
-    const newData = { ...data };
-    if (!newData.timeWindowCells) newData.timeWindowCells = [];
-    
-    const updatedCells = newData.timeWindowCells.map(cell => {
-      if (cell.dayId === dayId) {
-        return { ...cell, customText: newText };
-      }
-      return cell;
-    });
-    
-    newData.timeWindowCells = updatedCells;
-    onDataChange(newData);
-  };
+  // Data operations
+  const handleLoadSampleData = useCallback(() => {
+    const sampleData = generateSampleData();
+    onDataChange(sampleData);
+  }, [onDataChange]);
 
-  const handleUngroupGroup = (groupId: string) => {
-    ungroupActivityGroup(groupId);
-  };
-
-  const handleRenameGroup = (groupId: string, newName: string) => {
-    renameActivityGroup(groupId, newName);
-  };
-
-  const handleChangeGroupColor = (groupId: string, newColor: string) => {
-    changeActivityGroupColor(groupId, newColor);
-  };
-
-  // Function to load sample data
-  const handleLoadSampleData = () => {
-    if (window.confirm('This will replace all current data with sample data. Are you sure?')) {
-      const sampleData = generateSampleData();
-      onDataChange(sampleData);
-      
-      // Reset local state
-      setSelectedActivityCells(new Set());
-      setSelectedTimeWindowCells(new Set());
-      setSelectedActivityHeaders(new Set());
-      setCollapsedGroups(new Set());
-      setEditingActivity(null);
-      setEditValues({});
-    }
-  };
-
-  // Function to clear all data
-  const handleClearData = () => {
-    if (window.confirm('This will clear all data and reset to empty structure. Are you sure?')) {
+  const handleClearData = useCallback(() => {
+    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
       const emptyData = generateEmptyData();
       onDataChange(emptyData);
-      
-      // Reset local state
-      setSelectedActivityCells(new Set());
-      setSelectedTimeWindowCells(new Set());
-      setSelectedActivityHeaders(new Set());
-      setCollapsedGroups(new Set());
-      setEditingActivity(null);
-      setEditValues({});
     }
-  };
+  }, [onDataChange]);
+
+  // Success feedback
+  const showSuccessMessage = useCallback(() => {
+    setShowMoveSuccess(true);
+    setTimeout(() => setShowMoveSuccess(false), 2000);
+  }, []);
+
+  // Check for merged cells
+  const isMergedActivityCell = useMemo(() => {
+    if (selectedActivityCells.size !== 1) return false;
+    const cellKey = Array.from(selectedActivityCells)[0];
+    const [activityId, dayId] = cellKey.split(':');
+    const cellData = getActivityCell(activityId, dayId);
+    return cellData && ((cellData.colspan && cellData.colspan > 1) || (cellData.rowspan && cellData.rowspan > 1));
+  }, [selectedActivityCells, getActivityCell]);
+
+  const isMergedTimeWindowCell = useMemo(() => {
+    if (selectedTimeWindowCells.size !== 1) return false;
+    const dayId = Array.from(selectedTimeWindowCells)[0];
+    const cellData = fullData.timeWindowCells?.find(cell => cell.dayId === dayId);
+    return cellData && ((cellData.colspan && cellData.colspan > 1) || (cellData.rowspan && cellData.rowspan > 1));
+  }, [selectedTimeWindowCells, fullData.timeWindowCells]);
+
+  // Get activities and groups from fullData for display
+  const activities = useMemo(() => fullData.activities || [], [fullData.activities]);
+  const activityGroups = useMemo(() => fullData.activityGroups || [], [fullData.activityGroups]);
 
   return (
-    <>
-      <div className="flex flex-1 bg-gray-50 w-full">
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <TableHeader
-              title="SOA Builder - Prototype"
-              totalDays={getTotalDays()}
-              commentStats={commentStats}
-              selectedCellsCount={selectedActivityCells.size}
-              selectedTimeWindowCellsCount={selectedTimeWindowCells.size}
-              dragState={dragState}
-              showMoveSuccess={showMoveSuccess}
-              canUndo={canUndo}
-              historyLength={history.length}
-              onUndo={undo}
-              onOpenHeaderSettings={() => setShowHeaderSettingsModal(true)}
-              onLoadSampleData={handleLoadSampleData}
-              onClearData={handleClearData}
-            />
-            
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <TimelineHeaderSection
-                  data={data}
-                  headerManagement={headerManagement}
-                  dragState={dragState}
-                  hoveredItems={hoveredItems}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  onDrop={handleDropWithAnimation}
-                  onItemHover={handleItemHover}
-                  onItemClick={handleCellClick}
-                  onAddItem={handleAddItem}
-                  setHoveredDropZone={setHoveredDropZone}
-                  validateDrop={validateDrop}
-                  hasComment={hasComment}
-                  onCommentClick={handleCommentClick}
-                />
-                
-                <tbody>
-                  <StaticRowsSection
-                    data={data}
-                    headerManagement={headerManagement}
-                    timeRelativeCells={data.timeRelativeCells || []}
-                    timeWindowCells={data.timeWindowCells || []}
-                    timeOfDayCells={data.timeOfDayCells || []}
-                    totalColumns={getTotalDays()}
-                    isVisitLinked={isVisitLinked}
-                    getLinkedVisits={getLinkedVisits}
-                    getVisitLinkInfo={getVisitLinkInfo}
-                    shouldHighlightVisit={shouldHighlightVisit}
-                    handleVisitHover={handleVisitHover}
-                    onStaticCellClick={handleStaticCellClick}
-                    onOpenVisitLinkPanel={openVisitLinkPanel}
-                    selectedTimeWindowCells={selectedTimeWindowCells}
-                    onTimeWindowCellClick={handleTimeWindowCellClick}
-                    onTimeWindowCellRightClick={handleTimeWindowCellRightClick}
-                    onTimeWindowCellCustomTextChange={handleTimeWindowCellCustomTextChange}
-                  />
-                  
-                  <ActivityRowsSection
-                    data={data}
-                    activities={data.activities || []}
-                    activityGroups={data.activityGroups || []}
-                    selectedActivityHeaders={selectedActivityHeaders}
-                    collapsedGroups={collapsedGroups}
-                    editingActivity={editingActivity}
-                    hoveredActivityRow={hoveredActivityRow}
-                    selectedActivityCells={selectedActivityCells}
-                    dragState={dragState}
-                    getTotalDays={getTotalDays}
-                    getActivityCell={getActivityCell}
-                    getCellKey={getCellKey}
-                    isVisitLinked={isVisitLinked}
-                    shouldHighlightActivityCell={shouldHighlightActivityCell}
-                    hasComment={hasComment}
-                    onActivityEdit={handleActivityEdit}
-                    onActivitySave={handleActivitySave}
-                    onActivityCancel={handleActivityCancel}
-                    onActivityRemove={handleRemoveActivity}
-                    onActivityHeaderClick={handleActivityHeaderClick}
-                    onActivityHeaderRightClick={handleActivityHeaderRightClick}
-                    onActivityCellClick={handleActivityCellClick}
-                    onActivityCellRightClick={handleActivityCellRightClick}
-                    onActivityCellCustomTextChange={handleActivityCellCustomTextChange}
-                    onCommentClick={handleCommentClick}
-                    onActivityCellHover={handleActivityCellHover}
-                    onActivityRowHover={setHoveredActivityRow}
-                    onAddActivity={handleAddActivity}
-                    onToggleGroupCollapse={toggleGroupCollapse}
-                    onRenameGroup={renameActivityGroup}
-                    onChangeGroupColor={changeActivityGroupColor}
-                    onUngroupGroup={ungroupActivityGroup}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDrop={handleDropWithAnimation}
-                    setHoveredDropZone={setHoveredDropZone}
-                    validateDrop={validateDrop}
-                  />
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+      <TableHeader
+        totalDays={getTotalDays()}
+        commentStats={commentsHook.commentStats}
+        selectedCellsCount={selectedActivityCells.size}
+        selectedTimeWindowCellsCount={selectedTimeWindowCells.size}
+        dragState={dragDropHook.dragState}
+        showMoveSuccess={showMoveSuccess}
+        canUndo={dragDropHook.canUndo}
+        historyLength={dragDropHook.history.length}
+        onUndo={dragDropHook.undo}
+        onOpenHeaderSettings={() => setHeaderSettingsModal(true)}
+        onLoadSampleData={handleLoadSampleData}
+        onClearData={handleClearData}
+      />
 
-        {editContext && (
-          <>
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
-              onClick={() => setEditContext(null)}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <TimelineHeaderSection
+            data={data}
+            headerManagement={headerManagement}
+            dragState={dragDropHook.dragState}
+            hoveredItems={hoveredItems}
+            onDragStart={dragDropHook.handleDragStart}
+            onDragEnd={dragDropHook.handleDragEnd}
+            onDrop={dragDropHook.handleDrop}
+            onItemHover={handleItemHover}
+            onItemClick={handleItemClick}
+            onAddItem={handleAddItem}
+            setHoveredDropZone={dragDropHook.setHoveredDropZone}
+            validateDrop={dragDropHook.validateDrop}
+            hasComment={commentsHook.hasComment}
+            onCommentClick={handleCommentClick}
+          />
+
+          <tbody>
+            <StaticRowsSection
+              data={data}
+              headerManagement={headerManagement}
+              timeRelativeCells={data.timeRelativeCells || []}
+              timeWindowCells={data.timeWindowCells || []}
+              timeOfDayCells={data.timeOfDayCells || []}
+              totalColumns={getTotalDays()}
+              selectedTimeWindowCells={selectedTimeWindowCells}
+              isVisitLinked={visitLinksHook.isVisitLinked}
+              getLinkedVisits={visitLinksHook.getLinkedVisits}
+              getVisitLinkInfo={visitLinksHook.getVisitLinkInfo}
+              shouldHighlightVisit={visitLinksHook.shouldHighlightVisit}
+              handleVisitHover={visitLinksHook.handleVisitHover}
+              onStaticCellClick={handleStaticCellClick}
+              onTimeWindowCellClick={handleTimeWindowCellClick}
+              onTimeWindowCellRightClick={handleTimeWindowCellRightClick}
+              onTimeWindowCellCustomTextChange={handleTimeWindowCellCustomTextChange}
+              onOpenVisitLinkPanel={handleOpenVisitLinkPanel}
             />
-            {/* Edit Panel */}
-            <EditPanel
-              context={editContext}
-              onSave={handleEditSave}
-              onDelete={handleDelete}
-              onCancel={() => setEditContext(null)}
+
+            <ActivityRowsSection
+              data={data}
+              activities={activities}
+              activityGroups={activityGroups}
+              selectedActivityHeaders={selectedActivityHeaders}
+              collapsedGroups={collapsedGroups}
+              editingActivity={editingActivity}
+              hoveredActivityRow={hoveredActivityRow}
+              selectedActivityCells={selectedActivityCells}
+              dragState={dragDropHook.dragState}
+              getTotalDays={getTotalDays}
+              getActivityCell={getActivityCell}
+              getCellKey={getCellKey}
+              isVisitLinked={visitLinksHook.isVisitLinked}
+              shouldHighlightActivityCell={visitLinksHook.shouldHighlightActivityCell}
+              hasComment={commentsHook.hasComment}
+              onActivityEdit={handleActivityEdit}
+              onActivitySave={handleActivitySave}
+              onActivityCancel={handleActivityCancel}
+              onActivityRemove={handleActivityRemove}
+              onActivityHeaderClick={handleActivityHeaderClick}
+              onActivityHeaderRightClick={handleActivityHeaderRightClick}
+              onActivityCellClick={handleActivityCellClick}
+              onActivityCellRightClick={handleActivityCellRightClick}
+              onActivityCellCustomTextChange={handleActivityCellCustomTextChange}
+              onCommentClick={handleCommentClick}
+              onActivityCellHover={visitLinksHook.handleActivityCellHover}
+              onActivityRowHover={setHoveredActivityRow}
+              onAddActivity={handleAddActivity}
+              onToggleGroupCollapse={(groupId) => {
+                setCollapsedGroups(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(groupId)) {
+                    newSet.delete(groupId);
+                  } else {
+                    newSet.add(groupId);
+                  }
+                  return newSet;
+                });
+              }}
+              onRenameGroup={handleRenameGroup}
+              onChangeGroupColor={handleChangeGroupColor}
+              onUngroupGroup={handleUngroupActivities}
+              onDragStart={dragDropHook.handleDragStart}
+              onDragEnd={dragDropHook.handleDragEnd}
+              onDrop={dragDropHook.handleDrop}
+              setHoveredDropZone={dragDropHook.setHoveredDropZone}
+              validateDrop={dragDropHook.validateDrop}
             />
-          </>
-        )}
+          </tbody>
+        </table>
       </div>
-      
-      <TimelineHeaderSettingsModal
-        isOpen={showHeaderSettingsModal}
-        headers={headerManagement.headers}
-        activeHeaders={headerManagement.activeHeaders}
-        inactiveHeaders={headerManagement.inactiveHeaders}
-        editingHeaderId={headerManagement.editingHeaderId}
-        onClose={() => setShowHeaderSettingsModal(false)}
-        onStartEdit={headerManagement.startEditingHeader}
-        onSaveLabel={headerManagement.saveHeaderLabel}
-        onCancelEdit={headerManagement.cancelEditingHeader}
-        onToggleVisibility={(headerId) => {
-          const header = headerManagement.headers.find(h => h.id === headerId);
-          if (header?.isVisible) {
-            headerManagement.hideHeader(headerId);
-          } else {
-            headerManagement.showHeader(headerId);
-          }
-        }}
-        onDisableHeader={headerManagement.disableHeader}
-        onEnableHeader={headerManagement.enableHeader}
-      />
-      
+
+      {/* Edit Panel */}
+      {editContext && (
+        <EditPanel
+          context={editContext}
+          onSave={handleEditSave}
+          onDelete={handleEditDelete}
+          onCancel={handleEditCancel}
+        />
+      )}
+
+      {/* Comment Modal */}
       <CommentModal
-        isOpen={commentModal.isOpen}
-        position={commentModal.position}
-        cellId={commentModal.cellId}
-        cellType={commentModal.cellType}
-        existingComment={commentModal.existingComment}
-        onSave={saveComment}
-        onDelete={deleteComment}
-        onClose={closeCommentModal}
+        isOpen={commentsHook.commentModal.isOpen}
+        position={commentsHook.commentModal.position}
+        cellId={commentsHook.commentModal.cellId}
+        cellType={commentsHook.commentModal.cellType}
+        existingComment={commentsHook.commentModal.existingComment}
+        onSave={commentsHook.saveComment}
+        onDelete={commentsHook.deleteComment}
+        onClose={commentsHook.closeCommentModal}
       />
-      
-      <VisitTypeSelector
-        isOpen={visitTypeSelector?.isOpen || false}
-        position={visitTypeSelector?.position || { x: 0, y: 0 }}
-        currentVisitType={visitTypeSelector ? getActivityCell(visitTypeSelector.activityId, visitTypeSelector.dayId)?.visitType : undefined}
-        onSelect={handleVisitTypeSelect}
-        onClose={() => setVisitTypeSelector(null)}
-      />
-      
-      <TextInputModal
-        isOpen={textInputState.isOpen}
-        position={textInputState.position}
-        currentText={textInputState.activityId && textInputState.dayId ? 
-          getActivityCell(textInputState.activityId, textInputState.dayId)?.customText : ''}
-        onSave={handleTextInputForCell}
-        onClose={() => setTextInputState({
-          isOpen: false,
-          position: { x: 0, y: 0 },
-          activityId: '',
-          dayId: ''
-        })}
-      />
-      
+
+      {/* Empty Group Modal */}
+      {dragDropHook.emptyGroup && (
+        <EmptyGroupModal
+          isOpen={!!dragDropHook.emptyGroup}
+          groupName={dragDropHook.emptyGroup.name}
+          groupType={dragDropHook.emptyGroup.type}
+          onKeepEmpty={dragDropHook.handleKeepEmptyGroup}
+          onDelete={dragDropHook.handleDeleteEmptyGroup}
+          onClose={dragDropHook.closeEmptyGroupModal}
+        />
+      )}
+
+      {/* Activity Cell Context Menu */}
       <ActivityCellContextMenu
-        isOpen={contextMenuState.isOpen}
-        position={{ x: contextMenuState.x, y: contextMenuState.y }}
+        isOpen={activityCellContextMenu.isOpen}
+        position={activityCellContextMenu.position}
         selectedCells={selectedActivityCells}
         selectedTimeWindowCells={selectedTimeWindowCells}
-        clickedCell={contextMenuState.clickedCell}
-        clickedTimeWindowCell={contextMenuState.clickedTimeWindowCell}
-        isMergedCell={contextMenuState.clickedCell ? isCellMerged(contextMenuState.clickedCell.activityId, contextMenuState.clickedCell.dayId) : false}
-        isMergedTimeWindowCell={contextMenuState.clickedTimeWindowCell ? 
-          (data.timeWindowCells?.find(cell => cell.dayId === contextMenuState.clickedTimeWindowCell && cell.colspan)?.colspan || 0) > 1 : false}
-        onMerge={mergeSelectedCells}
-        onUnmerge={() => {
-          if (contextMenuState.clickedCell) {
-            unmergeCell(contextMenuState.clickedCell.activityId, contextMenuState.clickedCell.dayId);
-          }
-        }}
-        onMergeTimeWindow={mergeSelectedTimeWindowCells}
-        onUnmergeTimeWindow={() => {
-          if (contextMenuState.clickedTimeWindowCell) {
-            unmergeTimeWindowCell(contextMenuState.clickedTimeWindowCell);
-          }
-        }}
-        onActivateSelected={activateSelectedCells}
-        onClearSelected={clearSelectedCells}
-        onSetVisitTypeForSingleCell={() => {
-          if (contextMenuState.clickedCell) {
-            setVisitTypeSelector({
-              isOpen: true,
-              position: { x: contextMenuState.x, y: contextMenuState.y },
-              activityId: contextMenuState.clickedCell.activityId,
-              dayId: contextMenuState.clickedCell.dayId
-            });
-          }
-        }}
+        clickedCell={activityCellContextMenu.clickedCell}
+        clickedTimeWindowCell={activityCellContextMenu.clickedTimeWindowCell}
+        isMergedCell={isMergedActivityCell}
+        isMergedTimeWindowCell={isMergedTimeWindowCell}
+        onMerge={handleMergeActivityCells}
+        onUnmerge={handleUnmergeActivityCells}
+        onMergeTimeWindow={handleMergeTimeWindowCells}
+        onUnmergeTimeWindow={handleUnmergeTimeWindowCells}
+        onActivateSelected={handleActivateSelectedCells}
+        onClearSelected={handleClearSelectedCells}
+        onSetVisitTypeForSingleCell={handleSetVisitTypeForSingleCell}
         onAddTextToSingleCell={handleAddTextToSingleCell}
-        onClose={() => setContextMenuState({ isOpen: false, x: 0, y: 0, clickedCell: null, clickedTimeWindowCell: null })}
-      />
-      
-      <ActivityHeaderContextMenu
-        isOpen={activityHeaderContextMenuState.isOpen}
-        position={{ x: activityHeaderContextMenuState.x, y: activityHeaderContextMenuState.y }}
-        selectedActivityHeaders={selectedActivityHeaders}
-        clickedActivityId={activityHeaderContextMenuState.clickedActivityId}
-        activityGroups={data.activityGroups || []}
-        activities={data.activities || []}
-        onGroup={groupSelectedActivityHeaders}
-        onUngroup={ungroupActivityGroup}
-        onRename={(groupId) => {
-          const group = data.activityGroups?.find(g => g.id === groupId);
-          if (group) {
-            const newName = prompt('Enter new group name:', group.name);
-            if (newName && newName.trim() !== group.name) {
-              renameActivityGroup(groupId, newName.trim());
-            }
-          }
-        }}
-        onChangeColor={(groupId) => {
-          // This will be handled by the color picker in ActivityGroupHeader
-          console.log('Change color for group:', groupId);
-        }}
-        onClose={() => setActivityHeaderContextMenuState({ isOpen: false, x: 0, y: 0, clickedActivityId: null })}
-      />
-      
-      <EmptyGroupModal
-        isOpen={!!emptyGroup}
-        groupName={emptyGroup?.name || ''}
-        groupType={emptyGroup?.type || 'day'}
-        onKeepEmpty={handleKeepEmptyGroup}
-        onDelete={handleDeleteEmptyGroup}
-        onClose={closeEmptyGroupModal}
+        onClose={() => setActivityCellContextMenu(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {/* Group Header Context Menu */}
-      <ActivityGroupHeaderContextMenu
-        isOpen={groupHeaderContextMenu.isOpen}
-        position={groupHeaderContextMenu.position}
-        groupId={groupHeaderContextMenu.groupId}
-        groupName={groupHeaderContextMenu.groupName}
-        onUngroup={handleUngroupGroup}
-        onRename={handleRenameGroup}
-        onChangeColor={handleChangeGroupColor}
-        onClose={() => setGroupHeaderContextMenu(prev => ({ ...prev, isOpen: false }))}
+      {/* Activity Header Context Menu */}
+      <ActivityHeaderContextMenu
+        isOpen={activityHeaderContextMenu.isOpen}
+        position={activityHeaderContextMenu.position}
+        selectedActivityHeaders={selectedActivityHeaders}
+        clickedActivityId={activityHeaderContextMenu.clickedActivityId}
+        activityGroups={activityGroups}
+        activities={activities}
+        onGroup={handleGroupActivities}
+        onUngroup={handleUngroupActivities}
+        onRename={(groupId) => {
+          // Handle rename through group header context menu
+          console.log('Rename group:', groupId);
+        }}
+        onChangeColor={(groupId) => {
+          // Handle color change through group header context menu
+          console.log('Change color:', groupId);
+        }}
+        onClose={() => setActivityHeaderContextMenu(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Visit Type Selector */}
+      <VisitTypeSelector
+        isOpen={visitTypeSelector.isOpen}
+        position={visitTypeSelector.position}
+        currentVisitType={visitTypeSelector.currentVisitType}
+        onSelect={handleVisitTypeSelect}
+        onClose={() => setVisitTypeSelector(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Text Input Modal */}
+      <TextInputModal
+        isOpen={textInputModal.isOpen}
+        position={textInputModal.position}
+        currentText={textInputModal.currentText}
+        onSave={handleTextSave}
+        onClose={() => setTextInputModal(prev => ({ ...prev, isOpen: false }))}
       />
 
       {/* Visit Link Panel */}
       <VisitLinkPanel
-        isOpen={visitLinkPanelState.isOpen}
-        onClose={closeVisitLinkPanel}
-        currentDayId={visitLinkPanelState.dayId || ''}
-        allDays={getAllDayObjects()}
-        existingVisitLinks={data.visitLinks || []}
-        onSaveLinks={updateVisitLinks}
-        onUnlinkAll={unlinkAllVisits}
+        isOpen={visitLinkPanel.isOpen}
+        onClose={() => setVisitLinkPanel(prev => ({ ...prev, isOpen: false }))}
+        currentDayId={visitLinkPanel.currentDayId || ''}
+        allDays={getAllDays()}
+        existingVisitLinks={fullData.visitLinks || []}
+        onSaveLinks={visitLinksHook.updateVisitLinks}
+        onUnlinkAll={visitLinksHook.unlinkAllVisits}
       />
-    </>
+
+      {/* Timeline Header Settings Modal */}
+      <TimelineHeaderSettingsModal
+        isOpen={headerSettingsModal}
+        headers={headerManagement.headers}
+        activeHeaders={headerManagement.headers.filter(h => h.isActive)}
+        inactiveHeaders={headerManagement.headers.filter(h => !h.isActive)}
+        editingHeaderId={headerManagement.editingHeaderId}
+        onClose={() => setHeaderSettingsModal(false)}
+        onStartEdit={headerManagement.startEditingHeader}
+        onSaveLabel={headerManagement.saveHeaderLabel}
+        onCancelEdit={headerManagement.cancelEditingHeader}
+        onToggleVisibility={(headerId) => {
+          // Handle visibility toggle
+          console.log('Toggle visibility:', headerId);
+        }}
+        onDisableHeader={(headerId) => {
+          // Handle disable header
+          console.log('Disable header:', headerId);
+        }}
+        onEnableHeader={(headerId) => {
+          // Handle enable header
+          console.log('Enable header:', headerId);
+        }}
+      />
+    </div>
   );
 };
