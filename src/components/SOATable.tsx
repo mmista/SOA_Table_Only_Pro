@@ -9,6 +9,7 @@ import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
 import { ActivityHeaderContextMenu } from './ActivityHeaderContextMenu';
 import { ActivityGroupHeaderContextMenu } from './ActivityGroupHeaderContextMenu';
 import { TextInputModal } from './TextInputModal';
+import { TimelineHeaderContextMenu } from './TimelineHeaderContextMenu';
 import { ActivityGroup } from '../types/soa';
 import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
