@@ -142,6 +142,8 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
                 <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             )}
+          </div>
+        </div>
       </td>
       
       {/* Data columns area */}
