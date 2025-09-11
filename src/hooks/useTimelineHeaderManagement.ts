@@ -176,6 +176,15 @@ export const useTimelineHeaderManagement = () => {
     setPreviousMinimizedStates(new Map());
   }, [previousMinimizedStates]);
 
+  // Toggle header visibility
+  const toggleHeaderVisibility = useCallback((headerId: string) => {
+    setHeaders(prev => prev.map(header => 
+      header.id === headerId 
+        ? { ...header, isVisible: !header.isVisible }
+        : header
+    ));
+  }, []);
+
   // Hidden container management
   const toggleHiddenContainer = useCallback(() => {
     setIsHiddenContainerExpanded(prev => !prev);
@@ -227,6 +236,7 @@ export const useTimelineHeaderManagement = () => {
     enableHeader,
     focusHeader,
     unfocusHeader,
+    toggleHeaderVisibility,
     toggleHiddenContainer,
     restoreAllHeaders,
     

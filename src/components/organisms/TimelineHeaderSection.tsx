@@ -195,6 +195,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     setContextMenu(prev => ({ ...prev, isOpen: false }));
   }, []);
 
+  // Helper function to collect all visible day IDs from filtered data
+  const getVisibleDayIds = React.useCallback((filteredData: SOAData): string[] => {
+    const dayIds: string[] = [];
+    filteredData.periods.forEach(period => {
+      period.cycles.forEach(cycle => {
+        cycle.weeks.forEach(week => {
+          week.days.forEach(day => {
+            dayIds.push(day.id);
+          });
+        });
+      });
+    });
+    return dayIds;
+  }, []);
+
   const renderDraggableCell = (
     title: string,
     colSpan: number,
@@ -256,7 +271,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
 
   // Calculate colspan for periods
   const getPeriodColspan = (period: Period): number => {
-    if (headerManagement.isHeaderMinimized(`period-${period.id}`) || headerManagement.isHeaderMinimized(period.id)) {
+    if (headerManagement.isHeaderMinimized(period.id)) {
       return 1;
     }
     return period.cycles.reduce((total: number, cycle: any) => {
@@ -305,7 +320,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
                   onCancelEdit={headerManagement.cancelEditingHeader}
-                  onToggleVisibility={headerManagement.hideHeaderRow}
+                  onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
             })()}
@@ -336,7 +351,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
                   onCancelEdit={headerManagement.cancelEditingHeader}
-                  onToggleVisibility={headerManagement.hideHeaderRow}
+                  onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
             })()}
@@ -369,7 +384,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
                   onCancelEdit={headerManagement.cancelEditingHeader}
-                  onToggleVisibility={headerManagement.hideHeaderRow}
+                  onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
             })()}
@@ -404,7 +419,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
                   onCancelEdit={headerManagement.cancelEditingHeader}
-                  onToggleVisibility={headerManagement.hideHeaderRow}
+                  onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
             })()}
@@ -440,6 +455,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         isFocusMode={headerManagement.isFocusMode}
         onMinimize={headerManagement.minimizeHeader}
         onUnminimize={headerManagement.unminimizeHeader}
+        onHideRow={headerManagement.hideHeaderRow}
         onFocus={headerManagement.focusHeader}
         onUnfocus={headerManagement.unfocusHeader}
         onClose={handleCloseContextMenu}

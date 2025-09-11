@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Eye, EyeOff, Focus, X, Minimize2 } from 'lucide-react';
+import { Eye, EyeOff, Focus, X, Minimize2, EyeIcon } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 
 interface TimelineHeaderContextMenuProps {
@@ -13,6 +13,7 @@ interface TimelineHeaderContextMenuProps {
   isFocusMode: boolean;
   onMinimize: (headerId: string) => void;
   onUnminimize: (headerId: string) => void;
+  onHideRow: (headerId: string) => void;
   onFocus: (headerId: string, headerType: EditableItemType) => void;
   onUnfocus: () => void;
   onClose: () => void;
@@ -29,6 +30,7 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
   isFocusMode,
   onMinimize,
   onUnminimize,
+  onHideRow,
   onFocus,
   onUnfocus,
   onClose
@@ -108,6 +110,11 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
     onClose();
   };
 
+  const handleHideRow = () => {
+    onHideRow(headerId);
+    onClose();
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -164,7 +171,7 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
                 onClick={handleMinimize}
               >
                 <Minimize2 className="w-4 h-4 text-orange-500" />
-                <span>Minimize {headerType}</span>
+                <span>Minimize column</span>
               </button>
             ) : (
               <button
@@ -172,9 +179,17 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
                 onClick={handleUnminimize}
               >
                 <Eye className="w-4 h-4 text-green-500" />
-                <span>Restore {headerType}</span>
+                <span>Restore column</span>
               </button>
             )}
+            
+            <button
+              className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={handleHideRow}
+            >
+              <EyeOff className="w-4 h-4 text-red-500" />
+              <span>Hide row</span>
+            </button>
           </>
         )}
         
