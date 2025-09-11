@@ -118,6 +118,18 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
       return groupIndex !== -1 ? { groupIndex } : null;
     }
     
+    // Handle activity items
+    if (itemType === 'activity') {
+      const activityIndex = data.activities?.findIndex(a => a.id === itemId) ?? -1;
+      return activityIndex !== -1 ? { activityIndex } : null;
+    }
+    
+    // Handle activity group items
+    if (itemType === 'activity-group') {
+      const groupIndex = data.activityGroups?.findIndex(g => g.id === itemId) ?? -1;
+      return groupIndex !== -1 ? { groupIndex } : null;
+    }
+    
     for (let periodIndex = 0; periodIndex < data.periods.length; periodIndex++) {
       const period = data.periods[periodIndex];
       
@@ -169,6 +181,21 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
       return newData;
     }
     
+    
+    // Handle activity items
+    if (itemType === 'activity') {
+      if (!newData.activities) newData.activities = [];
+      newData.activities = newData.activities.filter((a: ActivityData) => a.id !== itemId);
+      return newData;
+    }
+    
+    // Handle activity group items
+    if (itemType === 'activity-group') {
+      if (!newData.activityGroups) newData.activityGroups = [];
+      newData.activityGroups = newData.activityGroups.filter((g: ActivityGroup) => g.id !== itemId);
+      return newData;
+    }
+    
     const path = findItemPath(itemId, itemType);
     
     if (!path) return newData;
@@ -194,6 +221,56 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
     position: 'before' | 'after' | 'inside'
   ): { newData: SOAData; sourceParentInfo: EmptyGroupInfo | null } => {
     const newData = JSON.parse(JSON.stringify(data));
+    
+    // Handle activity items
+    if (itemType === 'activity') {
+      if (!newData.activities) newData.activities = [];
+      
+      // Remove from source
+      const sourceIndex = newData.activities.findIndex((a: ActivityData) => a.id === item.id);
+      if (sourceIndex !== -1) {
+        newData.activities.splice(sourceIndex, 1);
+      }
+      
+      // Find target and insert
+      if (targetType === 'activity') {
+        const targetIndex = newData.activities.findIndex((a: ActivityData) => a.id === targetId);
+        if (targetIndex !== -1) {
+          const insertIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+          newData.activities.splice(insertIndex, 0, item);
+        }
+      } else if (targetType === 'activity-group') {
+        // Insert at the end of activities
+        newData.activities.push(item);
+      }
+      
+      return { newData, sourceParentInfo: null };
+    }
+    
+    // Handle activity group items
+    if (itemType === 'activity-group') {
+      if (!newData.activityGroups) newData.activityGroups = [];
+      
+      // Remove from source
+      const sourceIndex = newData.activityGroups.findIndex((g: ActivityGroup) => g.id === item.id);
+      if (sourceIndex !== -1) {
+        newData.activityGroups.splice(sourceIndex, 1);
+      }
+      
+      // Find target and insert
+      if (targetType === 'activity-group') {
+        const targetIndex = newData.activityGroups.findIndex((g: ActivityGroup) => g.id === targetId);
+        if (targetIndex !== -1) {
+          const insertIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+          newData.activityGroups.splice(insertIndex, 0, item);
+        }
+      } else {
+        // Insert at the end of activity groups
+        newData.activityGroups.push(item);
+      }
+      
+      return { newData, sourceParentInfo: null };
+    }
     
     // Handle activity items
     if (itemType === 'activity') {
@@ -357,6 +434,18 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
       return groupIndex !== -1 ? { groupIndex } : null;
     }
     
+    // Handle activity items
+    if (itemType === 'activity') {
+      const activityIndex = searchData.activities?.findIndex(a => a.id === itemId) ?? -1;
+      return activityIndex !== -1 ? { activityIndex } : null;
+    }
+    
+    // Handle activity group items
+    if (itemType === 'activity-group') {
+      const groupIndex = searchData.activityGroups?.findIndex(g => g.id === itemId) ?? -1;
+      return groupIndex !== -1 ? { groupIndex } : null;
+    }
+    
     for (let periodIndex = 0; periodIndex < searchData.periods.length; periodIndex++) {
       const period = searchData.periods[periodIndex];
       
@@ -482,6 +571,14 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
       day: {
         week: ['inside'],
         day: ['before', 'after']
+      activity: {
+        activity: ['before', 'after'],
+        'activity-group': ['before', 'after']
+      },
+      'activity-group': {
+        'activity-group': ['before', 'after'],
+        activity: ['before', 'after']
+      }
       activity: {
         activity: ['before', 'after'],
         'activity-group': ['before', 'after']
