@@ -8,7 +8,6 @@ import { ActivityCellContextMenu } from './ActivityCellContextMenu';
 import { TimelineHeaderSettingsModal } from './TimelineHeaderSettingsModal';
 import { ActivityHeaderContextMenu } from './ActivityHeaderContextMenu';
 import { ActivityGroupHeaderContextMenu } from './ActivityGroupHeaderContextMenu';
-import { TextInputModal } from './TextInputModal';
 import { ActivityGroup } from '../types/soa';
 import { TableHeader } from './molecules/TableHeader';
 import { TimelineHeaderSection } from './organisms/TimelineHeaderSection';
@@ -48,18 +47,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const [hoveredActivityRow, setHoveredActivityRow] = useState<string | null>(null);
   const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
   const [visitTypeSelector, setVisitTypeSelector] = useState<{
-    isOpen: boolean,
-    position: { x: number, y: number },
-    activityId: string,
-    dayId: string,
-  }>({
-    isOpen: false,
-    position: { x: 0, y: 0 },
-    activityId: '',
-    dayId: ''
-  });
-
-  const [textInputState, setTextInputState] = useState<{
     isOpen: boolean,
     position: { x: number, y: number },
     activityId: string,
@@ -1093,49 +1080,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     setSelectionStartCell(null);
   };
 
-  // New function to handle adding text to a single cell
-  const handleAddTextToSingleCell = () => {
-    if (!contextMenuState.clickedCell) return;
-    
-    setTextInputState({
-      isOpen: true,
-      position: { x: contextMenuState.x, y: contextMenuState.y },
-      activityId: contextMenuState.clickedCell.activityId,
-      dayId: contextMenuState.clickedCell.dayId
-    });
-  };
-
-  // Function to handle text input for single cell
-  const handleTextInputForCell = (text: string) => {
-    if (!textInputState.activityId || !textInputState.dayId) return;
-    
-    setActivities(prev => prev.map(activity => {
-      if (activity.id === textInputState.activityId) {
-        return {
-          ...activity,
-          cells: activity.cells.map(cell => {
-            if (cell.dayId === textInputState.dayId) {
-              return {
-                ...cell,
-                customText: text.trim() || undefined,
-                isActive: text.trim() ? true : cell.isActive // Activate cell if text is added
-              };
-            }
-            return cell;
-          })
-        };
-      }
-      return activity;
-    }));
-    
-    setTextInputState({
-      isOpen: false,
-      position: { x: 0, y: 0 },
-      activityId: '',
-      dayId: ''
-    });
-  };
-
   const handleCommentClick = (
     e: React.MouseEvent,
     cellId: string,
@@ -1547,20 +1491,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         onClose={() => setVisitTypeSelector(null)}
       />
       
-      <TextInputModal
-        isOpen={textInputState.isOpen}
-        position={textInputState.position}
-        currentText={textInputState.activityId && textInputState.dayId ? 
-          getActivityCell(textInputState.activityId, textInputState.dayId)?.customText : ''}
-        onSave={handleTextInputForCell}
-        onClose={() => setTextInputState({
-          isOpen: false,
-          position: { x: 0, y: 0 },
-          activityId: '',
-          dayId: ''
-        })}
-      />
-      
       <ActivityCellContextMenu
         isOpen={contextMenuState.isOpen}
         position={{ x: contextMenuState.x, y: contextMenuState.y }}
@@ -1595,7 +1525,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
             });
           }
         }}
-        onAddTextToSingleCell={handleAddTextToSingleCell}
         onClose={() => setContextMenuState({ isOpen: false, x: 0, y: 0, clickedCell: null, clickedTimeWindowCell: null })}
       />
       
