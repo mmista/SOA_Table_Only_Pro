@@ -228,12 +228,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   isVisible={header?.isVisible || false}
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
-                onToggleHeaderVisibility={headerManagement.hideHeaderRow}
+                  onCancelEdit={headerManagement.cancelEditingHeader}
                   onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
-          {data.periods.map(period =>
-            {currentData.periods.map(period => 
+            })()}
+            {data.periods.map(period =>
               renderDraggableCell(
                 period.name,
                 getPeriodColspan(period),
@@ -259,12 +259,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   isVisible={header?.isVisible || false}
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
-                onToggleHeaderVisibility={headerManagement.hideHeaderRow}
+                  onCancelEdit={headerManagement.cancelEditingHeader}
                   onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
-          {data.periods.map(period =>
-            {currentData.periods.map(period =>
+            })()}
+            {data.periods.map(period =>
               period.cycles.map(cycle => 
                 renderDraggableCell(
                   cycle.name,
@@ -292,12 +292,12 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   isVisible={header?.isVisible || false}
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
-                onToggleHeaderVisibility={headerManagement.hideHeaderRow}
+                  onCancelEdit={headerManagement.cancelEditingHeader}
                   onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
-          {data.periods.map(period =>
-            {currentData.periods.map(period =>
+            })()}
+            {data.periods.map(period =>
               period.cycles.map(cycle =>
                 cycle.weeks.map(week =>
                   renderDraggableCell(
@@ -332,7 +332,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 />
               );
             })()}
-            {currentData.periods.map(period =>
+            {data.periods.map(period =>
               period.cycles.map(cycle =>
                 cycle.weeks.map(week =>
                   week.days.map(day =>
