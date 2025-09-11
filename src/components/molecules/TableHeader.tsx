@@ -40,7 +40,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   onClearData
 }) => {
   return (
-    <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
+    <div className="p-4 bg-bolt-blue text-white flex items-center justify-between">
       <div>
         <h1 className="text-xl font-bold flex items-center space-x-2">
           <span>{title}</span>
