@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, Plus, Eye, X } from 'lucide-react';
+import { GripVertical, X } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 import { CommentIcon } from './CommentIcon';
 
@@ -12,7 +12,6 @@ interface DraggableCellProps {
   bgColor: string;
   isDragging: boolean;
   isHovered: boolean;
-  isMinimized: boolean;
   isFocused: boolean;
   isValidDropTarget: boolean;
   hoveredDropZone: string | null;
@@ -20,12 +19,10 @@ interface DraggableCellProps {
   onDragStart: (item: any, type: EditableItemType) => void;
   onDragEnd: () => void;
   onDrop: (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => void;
-  onUnminimize: (headerId: string) => void;
   onUnfocus: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onClick: () => void;
-  onAddItem: (type: EditableItemType, id: string, side: 'left' | 'right') => void;
   setHoveredDropZone: (zoneId: string | null) => void;
   onContextMenu: (e: React.MouseEvent, headerId: string, headerType: EditableItemType) => void;
   onCommentClick?: (e: React.MouseEvent) => void;
@@ -40,7 +37,6 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   bgColor,
   isDragging,
   isHovered,
-  isMinimized,
   isFocused,
   isValidDropTarget,
   hoveredDropZone,
@@ -48,12 +44,10 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   onDragStart,
   onDragEnd,
   onDrop,
-  onUnminimize,
   onUnfocus,
   onMouseEnter,
   onMouseLeave,
   onClick,
-  onAddItem,
   setHoveredDropZone,
   onContextMenu,
   onCommentClick
@@ -149,45 +143,16 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       default: return 'text-xs font-normal text-gray-500';
     }
   };
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     onContextMenu(e, item.id, type);
-  };
-
-  const handleUnminimize = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUnminimize(item.id);
   };
 
   const handleUnfocus = (e: React.MouseEvent) => {
     e.stopPropagation();
     onUnfocus();
   };
-
-  // Render minimized state
-  if (isMinimized) {
-    return (
-      <td
-        key={item.id}
-        className={`
-          relative border border-gray-300 text-center text-sm font-medium 
-          bg-gray-100 cursor-pointer hover:bg-gray-200 transition-all duration-200
-          w-8 min-w-[32px] max-w-[32px]
-        `}
-        onClick={handleUnminimize}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-        title={`Click to restore ${type}: ${title}`}
-      >
-        <div className="flex flex-col items-center justify-center py-2">
-          <Eye className="w-3 h-3 text-gray-600 mb-1" />
-          <div className="text-xs text-gray-600 writing-mode-vertical transform rotate-180">
-            {title.charAt(0)}
-          </div>
-        </div>
-      </td>
-    );
-  }
 
   return (
     <td
@@ -243,8 +208,8 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       {/* Drag Handle */}
       {!isFocused && (
         <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
-      </div>
+          <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
+        </div>
       )}
 
       {/* Content */}
@@ -271,30 +236,6 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
           {dragOver === 'inside' && (
             <div className="absolute inset-0 bg-blue-100 bg-opacity-30 z-0" />
           )}
-        </>
-      )}
-
-      {/* Add Buttons */}
-      {isHovered && !isDragging && !isFocused && (
-        <>
-          <button
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors z-30"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddItem(type, item.id, 'left');
-            }}
-          >
-            <Plus className="w-3 h-3" />
-          </button>
-          <button
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors z-30"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddItem(type, item.id, 'right');
-            }}
-          >
-            <Plus className="w-3 h-3" />
-          </button>
         </>
       )}
 

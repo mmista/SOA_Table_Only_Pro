@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Eye, EyeOff, Focus, X, Minimize2, EyeIcon } from 'lucide-react';
+import { Focus, X } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 
 interface TimelineHeaderContextMenuProps {
@@ -8,12 +8,8 @@ interface TimelineHeaderContextMenuProps {
   headerId: string | null;
   headerType: EditableItemType | null;
   headerName: string;
-  isHeaderMinimized: boolean;
   isHeaderFocused: boolean;
   isFocusMode: boolean;
-  onMinimize: (headerId: string) => void;
-  onUnminimize: (headerId: string) => void;
-  onHideRow: (headerId: string) => void;
   onFocus: (headerId: string, headerType: EditableItemType) => void;
   onUnfocus: () => void;
   onClose: () => void;
@@ -25,12 +21,8 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
   headerId,
   headerType,
   headerName,
-  isHeaderMinimized,
   isHeaderFocused,
   isFocusMode,
-  onMinimize,
-  onUnminimize,
-  onHideRow,
   onFocus,
   onUnfocus,
   onClose
@@ -64,7 +56,7 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
   // Calculate menu position to keep it within viewport
   const getMenuStyle = () => {
     const menuWidth = 250;
-    const menuHeight = 200;
+    const menuHeight = 150;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
@@ -90,16 +82,6 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
 
   const menuStyle = getMenuStyle();
 
-  const handleMinimize = () => {
-    onMinimize(headerId);
-    onClose();
-  };
-
-  const handleUnminimize = () => {
-    onUnminimize(headerId);
-    onClose();
-  };
-
   const handleFocus = () => {
     onFocus(headerId, headerType);
     onClose();
@@ -107,11 +89,6 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
 
   const handleUnfocus = () => {
     onUnfocus();
-    onClose();
-  };
-
-  const handleHideRow = () => {
-    onHideRow(headerId);
     onClose();
   };
 
@@ -158,39 +135,6 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
             <X className="w-4 h-4 text-red-500" />
             <span>Exit focus mode</span>
           </button>
-        )}
-        
-        {/* Minimize/Unminimize Options */}
-        {!isFocusMode && (
-          <>
-            <div className="border-t border-gray-100 my-1" />
-            
-            {!isHeaderMinimized ? (
-              <button
-                className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                onClick={handleMinimize}
-              >
-                <Minimize2 className="w-4 h-4 text-orange-500" />
-                <span>Minimize column</span>
-              </button>
-            ) : (
-              <button
-                className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                onClick={handleUnminimize}
-              >
-                <EyeIcon className="w-4 h-4 text-green-500" />
-                <span>Restore column</span>
-              </button>
-            )}
-            
-            <button
-              className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              onClick={handleHideRow}
-            >
-              <EyeOff className="w-4 h-4 text-red-500" />
-              <span>Hide row</span>
-            </button>
-          </>
         )}
         
         {/* Info */}
