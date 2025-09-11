@@ -18,6 +18,7 @@ interface TimelineHeaderSectionProps {
     week: string | null;
     day: string | null;
   };
+  focusedTimelineItem: { id: string; type: EditableItemType } | null;
   onDragStart: (item: any, type: EditableItemType) => void;
   onDragEnd: () => void;
   onDrop: (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => void;
@@ -28,6 +29,8 @@ interface TimelineHeaderSectionProps {
   validateDrop: (dragType: EditableItemType, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => boolean;
   hasComment: (cellId: string, cellType: string) => boolean;
   onCommentClick: (cellId: string, cellType: 'period' | 'cycle' | 'week' | 'day', position: { x: number; y: number }) => void;
+  onRightClick: (e: React.MouseEvent, item: any, type: EditableItemType) => void;
+  onExitFocus: () => void;
 }
 
 export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
@@ -35,6 +38,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   headerManagement,
   dragState,
   hoveredItems,
+  focusedTimelineItem,
   onDragStart,
   onDragEnd,
   onDrop,
@@ -44,7 +48,9 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   setHoveredDropZone,
   validateDrop,
   hasComment,
-  onCommentClick
+  onCommentClick,
+  onRightClick,
+  onExitFocus
 }) => {
 
   // Helper function to get header by type from centralized state
@@ -73,6 +79,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
       (validateDrop(dragState.draggedType, type, 'before') ||
        validateDrop(dragState.draggedType, type, 'after') ||
        validateDrop(dragState.draggedType, type, 'inside'));
+    const isFocused = focusedTimelineItem?.id === item.id && focusedTimelineItem?.type === type;
     
     return (
       <DraggableCell
@@ -88,6 +95,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         isValidDropTarget={isValidDropTarget}
         hoveredDropZone={dragState.hoveredDropZone}
         hasComment={hasComment(item.id, type)}
+        isFocused={isFocused}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onDrop={onDrop}
@@ -96,6 +104,8 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         onClick={() => onItemClick(item, type)}
         onAddItem={onAddItem}
         setHoveredDropZone={setHoveredDropZone}
+        onRightClick={onRightClick}
+        onExitFocus={onExitFocus}
         onCommentClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           onCommentClick(item.id, type, {

@@ -15,6 +15,7 @@ interface StaticRowsSectionProps {
   timeOfDayCells: TimeOfDayCell[];
   totalColumns: number;
   selectedTimeWindowCells: Set<string>;
+  focusedTimelineItem: { id: string; type: EditableItemType } | null;
   isVisitLinked: (dayId: string) => boolean;
   getLinkedVisits: (dayId: string) => string[];
   getVisitLinkInfo: (dayId: string) => { name?: string } | null;
@@ -25,6 +26,8 @@ interface StaticRowsSectionProps {
   onTimeWindowCellRightClick: (e: React.MouseEvent, dayId: string) => void;
   onTimeWindowCellCustomTextChange: (dayId: string, newText: string) => void;
   onOpenVisitLinkPanel: (dayId: string) => void;
+  onRightClick: (e: React.MouseEvent, item: any, type: EditableItemType) => void;
+  onExitFocus: () => void;
 }
 
 export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
@@ -35,6 +38,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   timeOfDayCells,
   totalColumns,
   selectedTimeWindowCells,
+  focusedTimelineItem,
   isVisitLinked,
   getLinkedVisits,
   getVisitLinkInfo,
@@ -44,7 +48,9 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   onTimeWindowCellClick,
   onTimeWindowCellRightClick,
   onTimeWindowCellCustomTextChange,
-  onOpenVisitLinkPanel
+  onOpenVisitLinkPanel,
+  onRightClick,
+  onExitFocus
 }) => {
 
   // Helper function to get cell value by dayId
@@ -96,16 +102,20 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         <tr>
           {(() => {
             const header = getHeaderByType('time-relative');
+            const isFocused = focusedTimelineItem?.id === header?.id && focusedTimelineItem?.type === 'time-relative';
             return (
           <EditableHeaderLabel
                 id={header?.id || 'time-relative'}
                 label={header?.label || 'TIME RELATIVE (H)'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
+                isFocused={isFocused}
             onStartEdit={headerManagement.startEditingHeader}
             onSaveLabel={headerManagement.saveHeaderLabel}
             onCancelEdit={headerManagement.cancelEditingHeader}
             onToggleVisibility={headerManagement.hideHeader}
+                onRightClick={onRightClick}
+                onExitFocus={onExitFocus}
           />
             );
           })()}
@@ -135,16 +145,20 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         <tr>
           {(() => {
             const header = getHeaderByType('allowed-window');
+            const isFocused = focusedTimelineItem?.id === header?.id && focusedTimelineItem?.type === 'allowed-window';
             return (
               <EditableHeaderLabel
                 id={header?.id || 'allowed-window'}
                 label={header?.label || 'TIME WINDOW (H)'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
+                isFocused={isFocused}
                 onStartEdit={headerManagement.startEditingHeader}
                 onSaveLabel={headerManagement.saveHeaderLabel}
                 onCancelEdit={headerManagement.cancelEditingHeader}
                 onToggleVisibility={headerManagement.hideHeader}
+                onRightClick={onRightClick}
+                onExitFocus={onExitFocus}
               />
             );
           })()}
@@ -190,16 +204,20 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         <tr>
           {(() => {
             const header = getHeaderByType('time-of-day');
+            const isFocused = focusedTimelineItem?.id === header?.id && focusedTimelineItem?.type === 'time-of-day';
             return (
           <EditableHeaderLabel
                 id={header?.id || 'time-of-day'}
                 label={header?.label || 'TIME OF DAY'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
+                isFocused={isFocused}
             onStartEdit={headerManagement.startEditingHeader}
             onSaveLabel={headerManagement.saveHeaderLabel}
             onCancelEdit={headerManagement.cancelEditingHeader}
             onToggleVisibility={headerManagement.hideHeader}
+                onRightClick={onRightClick}
+                onExitFocus={onExitFocus}
           />
             );
           })()}
@@ -230,16 +248,20 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
         <tr>
           {(() => {
             const header = getHeaderByType('visit');
+            const isFocused = focusedTimelineItem?.id === header?.id && focusedTimelineItem?.type === 'visit';
             return (
           <EditableHeaderLabel
                 id={header?.id || 'visit'}
                 label={header?.label || 'VISIT LABEL'}
                 isEditing={headerManagement.editingHeaderId === header?.id}
                 isVisible={header?.isVisible || false}
+                isFocused={isFocused}
             onStartEdit={headerManagement.startEditingHeader}
             onSaveLabel={headerManagement.saveHeaderLabel}
             onCancelEdit={headerManagement.cancelEditingHeader}
             onToggleVisibility={headerManagement.hideHeader}
+                onRightClick={onRightClick}
+                onExitFocus={onExitFocus}
           />
             );
           })()}

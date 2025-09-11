@@ -24,6 +24,10 @@ interface SOATableProps {
   data: SOAData;
   onDataChange: (data: SOAData) => void;
   headerManagement: ReturnType<typeof import('../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
+  isFocusModeActive: boolean;
+  focusedTimelineItem: { id: string; type: EditableItemType } | null;
+  onFocusTimelineItem: (id: string, type: EditableItemType) => void;
+  onExitFocusMode: () => void;
 }
 
 interface HoverState {
@@ -38,7 +42,15 @@ interface VisitLinkPanelState {
   dayId: string | null;
 }
 
-export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerManagement }) => {
+export const SOATable: React.FC<SOATableProps> = ({ 
+  data, 
+  onDataChange, 
+  headerManagement,
+  isFocusModeActive,
+  focusedTimelineItem,
+  onFocusTimelineItem,
+  onExitFocusMode
+}) => {
   const [hoveredCell, setHoveredCell] = useState<HoverState | null>(null);
   const [editContext, setEditContext] = useState<EditContext | null>(null);
   const [showMoveSuccess, setShowMoveSuccess] = useState(false);
@@ -115,6 +127,15 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     clickedActivityId: null
   });
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [timelineContextMenu, setTimelineContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    clickedItem: { id: string; name: string; type: EditableItemType } | null;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    clickedItem: null
+  });
   
   // Comments hook
   const {
@@ -187,6 +208,25 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     setTimeout(() => {
       setShowMoveSuccess(false);
     }, 2000);
+  };
+
+  // Timeline context menu handlers
+  const handleTimelineRightClick = (e: React.MouseEvent, item: any, type: EditableItemType) => {
+    e.preventDefault();
+    setTimelineContextMenu({
+      isOpen: true,
+      position: { x: e.clientX, y: e.clientY },
+      clickedItem: { id: item.id, name: item.name, type }
+    });
+  };
+
+  const handleCloseTimelineContextMenu = () => {
+    setTimelineContextMenu(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleTimelineFocus = (id: string, type: EditableItemType) => {
+    onFocusTimelineItem(id, type);
+    handleCloseTimelineContextMenu();
   };
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -1386,10 +1426,13 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
               showMoveSuccess={showMoveSuccess}
               canUndo={canUndo}
               historyLength={history.length}
+              isFocusModeActive={isFocusModeActive}
+              focusedTimelineItem={focusedTimelineItem}
               onUndo={undo}
               onOpenHeaderSettings={() => setShowHeaderSettingsModal(true)}
               onLoadSampleData={handleLoadSampleData}
               onClearData={handleClearData}
+              onExitFocus={onExitFocusMode}
             />
             
             <div className="overflow-x-auto">
@@ -1409,6 +1452,9 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                   validateDrop={validateDrop}
                   hasComment={hasComment}
                   onCommentClick={handleCommentClick}
+                  onRightClick={handleTimelineRightClick}
+                  onExitFocus={onExitFocusMode}
+                  focusedTimelineItem={focusedTimelineItem}
                 />
                 
                 <tbody>
@@ -1430,6 +1476,9 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                     onTimeWindowCellClick={handleTimeWindowCellClick}
                     onTimeWindowCellRightClick={handleTimeWindowCellRightClick}
                     onTimeWindowCellCustomTextChange={handleTimeWindowCellCustomTextChange}
+                    onRightClick={handleTimelineRightClick}
+                    onExitFocus={onExitFocusMode}
+                    focusedTimelineItem={focusedTimelineItem}
                   />
                   
                   <ActivityRowsSection
@@ -1494,6 +1543,17 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           </>
         )}
       </div>
+
+      {/* Timeline Header Context Menu */}
+      <TimelineHeaderContextMenu
+        isOpen={timelineContextMenu.isOpen}
+        position={timelineContextMenu.position}
+        clickedItem={timelineContextMenu.clickedItem}
+        onFocus={handleTimelineFocus}
+        onEdit={handleCellClick}
+        onAddItem={handleAddItem}
+        onClose={handleCloseTimelineContextMenu}
+      />
       
       <TimelineHeaderSettingsModal
         isOpen={showHeaderSettingsModal}
