@@ -132,6 +132,10 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     const isValidDropTarget = dragState.isDragging && 
       dragState.draggedItem?.id !== item.id;
     
+    // Get visibility state from header management
+    const header = getHeaderByType(type);
+    const isVisible = header?.isVisible ?? true;
+    
     return (
       <DraggableCell
         key={item.id}
@@ -146,6 +150,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         isFocused={isFocused}
         isValidDropTarget={isValidDropTarget}
         hoveredDropZone={dragState.hoveredDropZone}
+        isVisible={isVisible}
         hasComment={hasComment(item.id, type)}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
@@ -156,6 +161,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         onClick={() => onItemClick(item, type)}
         setHoveredDropZone={setHoveredDropZone}
         onContextMenu={handleContextMenu}
+        onToggleVisibility={headerManagement.toggleVisibility}
         onCommentClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           onCommentClick(item.id, type, {

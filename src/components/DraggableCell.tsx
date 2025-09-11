@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, X } from 'lucide-react';
+import { GripVertical, X, Eye, EyeOff } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 import { CommentIcon } from './CommentIcon';
 
@@ -16,6 +16,7 @@ interface DraggableCellProps {
   isValidDropTarget: boolean;
   hoveredDropZone: string | null;
   hasComment?: boolean;
+  isVisible?: boolean;
   onDragStart: (item: any, type: EditableItemType) => void;
   onDragEnd: () => void;
   onDrop: (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => void;
@@ -26,6 +27,7 @@ interface DraggableCellProps {
   setHoveredDropZone: (zoneId: string | null) => void;
   onContextMenu: (e: React.MouseEvent, headerId: string, headerType: EditableItemType) => void;
   onCommentClick?: (e: React.MouseEvent) => void;
+  onToggleVisibility?: (headerId: string) => void;
 }
 
 export const DraggableCell: React.FC<DraggableCellProps> = ({
@@ -41,6 +43,7 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   isValidDropTarget,
   hoveredDropZone,
   hasComment = false,
+  isVisible = true,
   onDragStart,
   onDragEnd,
   onDrop,
@@ -50,7 +53,8 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   onClick,
   setHoveredDropZone,
   onContextMenu,
-  onCommentClick
+  onCommentClick,
+  onToggleVisibility
 }) => {
   const [dragOver, setDragOver] = useState<'before' | 'after' | 'inside' | null>(null);
 
@@ -209,6 +213,32 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       {!isFocused && (
         <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
+        </div>
+      )}
+
+      {/* Visibility Toggle - only for timeline headers */}
+      {!isFocused && onToggleVisibility && ['period', 'cycle', 'week', 'day'].includes(type) && (
+        <div className="absolute top-1 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleVisibility(item.id);
+            }}
+            className={`
+              p-1 rounded-md transition-colors
+              ${isVisible 
+                ? 'text-blue-600 hover:bg-blue-50' 
+                : 'text-gray-400 hover:bg-gray-100'
+              }
+            `}
+            title={isVisible ? 'Hide from table' : 'Show in table'}
+          >
+            {isVisible ? (
+              <Eye className="w-3 h-3" />
+            ) : (
+              <EyeOff className="w-3 h-3" />
+            )}
+          </button>
         </div>
       )}
 
