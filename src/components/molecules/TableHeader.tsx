@@ -86,7 +86,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       <div className="flex items-center space-x-2">
         <button
           onClick={onLoadSampleData}
-          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-green-600 hover:bg-green-700 text-white"
+          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
           title="Load Sample Data"
         >
           <Database className="w-4 h-4" />
@@ -95,7 +95,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
         
         <button
           onClick={onClearData}
-          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+          className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"
           title="Clear All Data"
         >
           <Trash2 className="w-4 h-4" />
