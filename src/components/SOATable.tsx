@@ -24,6 +24,7 @@ import { generateSampleData, generateEmptyData } from '../utils/presetData';
 interface SOATableProps {
   data: SOAData;
   displayData: SOAData;
+  displayData: SOAData;
   onDataChange: (data: SOAData) => void;
   headerManagement: ReturnType<typeof import('../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
   isFocusModeActive: boolean;
@@ -34,6 +35,7 @@ interface SOATableProps {
 
 interface HoverState {
   type: EditableItemType;
+  displayData,
   displayData,
   id: string;
   side: 'left' | 'right';
