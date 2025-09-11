@@ -82,7 +82,6 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
     <tr className="bg-gray-50 border-t-2 border-b border-gray-200">
       <td 
         className="sticky left-0 bg-gray-50 px-4 py-3 z-[15] border-r border-gray-300"
-        colSpan={totalColumns}
         onContextMenu={(e) => onRightClick(e, group.id)}
       >
         <div className="flex items-center justify-between">
@@ -143,33 +142,16 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
                 <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             )}
-
-            <span className="text-xs text-gray-500">
-              ({group.activityIds.length} activities)
-            </span>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {/* Color Picker */}
-            <button
-              onClick={handleOpenColorPicker}
-              className="p-1 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
-              title="Change group color"
-            >
-              <Palette className="w-4 h-4" />
-            </button>
-
-            {/* Ungroup Button */}
-            <button
-              onClick={() => onUngroup(group.id)}
-              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-              title="Ungroup activities"
-            >
-              <Unlink className="w-4 h-4" />
-            </button>
           </div>
         </div>
+      </td>
+      
+      {/* Data columns area */}
+      <td 
+        className="bg-gray-50 border-l border-gray-300" 
+        colSpan={totalColumns}
+      >
+        {/* Empty space for data columns */}
       </td>
     </tr>
   );
