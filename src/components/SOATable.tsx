@@ -247,17 +247,20 @@ export const SOATable: React.FC<SOATableProps> = ({
   const getActivityDayIndices = (activityId: string, dayId: string) => {
     const activityIndex = (data.activities || []).findIndex(a => a.id === activityId);
     if (activityIndex === -1) return null;
-  const getAllDays = (sourceData = displayData): Day[] => {
-    const allDays: Day[] = [];
-    sourceData.periods.forEach(period => {
-      period.cycles.forEach(cycle => {
-        cycle.weeks.forEach(week => {
-          allDays.push(...week.days);
+    
+    const getAllDays = (sourceData = displayData): Day[] => {
+      const allDays: Day[] = [];
+      sourceData.periods.forEach(period => {
+        period.cycles.forEach(cycle => {
+          cycle.weeks.forEach(week => {
+            allDays.push(...week.days);
+          });
         });
       });
-    });
+      return allDays;
+    };
 
-    const dayIndex = allDays.findIndex(d => d.id === dayId);
+    const dayIndex = getAllDays().findIndex(d => d.id === dayId);
     if (dayIndex === -1) return null;
 
     return { activityIndex, dayIndex };
@@ -521,7 +524,6 @@ export const SOATable: React.FC<SOATableProps> = ({
       newData.periods.splice(insertIndex, 0, newPeriod);
     } else if (type === 'cycle') {
       for (const period of newData.periods) {
-      
         const cycleIndex = period.cycles.findIndex(c => c.id === id);
         if (cycleIndex !== -1) {
           const insertIndex = side === 'right' ? cycleIndex + 1 : cycleIndex;
