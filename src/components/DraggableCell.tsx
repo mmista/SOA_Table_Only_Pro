@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, Plus } from 'lucide-react';
+import { GripVertical, Plus, Search, X } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 import { CommentIcon } from './CommentIcon';
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Eye, EyeOff, Edit2, Check, X } from 'lucide-react';
+import { Eye, EyeOff, Edit2, Check, X, Search } from 'lucide-react';
+import { EditableItemType } from '../../types/soa';
 
 interface EditableHeaderLabelProps {
   id: string;

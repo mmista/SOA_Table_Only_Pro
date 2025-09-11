@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, CheckCircle, Undo2, Settings, Database, Trash2 } from 'lucide-react';
+import { MessageSquare, CheckCircle, Undo2, Settings, Database, Trash2, Search } from 'lucide-react';
 import { StatsBadge } from '../atoms/StatsBadge';
 import { DragIndicator } from '../atoms/DragIndicator';
 import { SuccessIndicator } from '../atoms/SuccessIndicator';
