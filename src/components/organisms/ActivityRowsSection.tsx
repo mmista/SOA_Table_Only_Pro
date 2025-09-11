@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { SOAData, ActivityData, ActivityCell, ActivityGroup, EditableItemType } from '../../types/soa';
+import { useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 import { ActivityRowHeader } from '../molecules/ActivityRowHeader';
 import { ActivityCell as ActivityCellComponent } from '../ActivityCell';
 import { ActivityGroupHeader } from '../ActivityGroupHeader';
@@ -22,6 +23,7 @@ interface ActivityRowsSectionProps {
     draggedType: EditableItemType;
     hoveredDropZone: string | null;
   };
+  headerManagement: ReturnType<typeof useTimelineHeaderManagement>;
   getTotalDays: () => number;
   getActivityCell: (activityId: string, dayId: string) => ActivityCell | undefined;
   getCellKey: (activityId: string, dayId: string) => string;
@@ -69,6 +71,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
   hoveredActivityRow,
   selectedActivityCells,
   dragState,
+  headerManagement,
   getTotalDays,
   getActivityCell,
   getCellKey,
