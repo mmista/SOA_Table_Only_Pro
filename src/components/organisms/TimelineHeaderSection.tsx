@@ -161,7 +161,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               'period',
               period,
               'bg-blue-100',
-              `${period.duration || getPeriodColspan(period)} days`
+              period.duration || undefined
             )
           )}
         </tr>
@@ -193,7 +193,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                 'cycle',
                 cycle,
                 'bg-green-100',
-                `${cycle.duration || getCycleColspan(cycle)} days`
+                cycle.duration || undefined
               )
             )
           )}
@@ -227,7 +227,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   'week',
                   week,
                   'bg-orange-100',
-                  `${week.duration || 7} days`
+                  week.duration || undefined
                 )
               )
             )

@@ -187,7 +187,7 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
         </div>
         {subtitle && (
           <div className={getSubtitleStyle()}>
-            ({subtitle})
+            {subtitle}
           </div>
         )}
       </div>

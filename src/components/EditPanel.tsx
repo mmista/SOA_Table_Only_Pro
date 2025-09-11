@@ -16,7 +16,7 @@ export const EditPanel: React.FC<EditPanelProps> = ({
   onCancel
 }) => {
   const [name, setName] = useState(context.item.name);
-  const [duration, setDuration] = useState(context.item.duration || '');
+  const [itemValue, setItemValue] = useState(context.item.duration || '');
   const [cellValue, setCellValue] = useState('');
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export const EditPanel: React.FC<EditPanelProps> = ({
       setCellValue((context.item as any).value?.toString() || '');
     } else {
       setName((context.item as any).name || '');
-      setDuration((context.item as any).duration || '');
+      setItemValue((context.item as any).duration || '');
     }
   }, [context.item]);
 
@@ -39,11 +39,17 @@ export const EditPanel: React.FC<EditPanelProps> = ({
         ...context.item,
         value: cellValue
       });
+    } else if (context.type === 'day') {
+      onSave({
+        ...context.item,
+        name,
+        duration: itemValue ? Number(itemValue) : undefined
+      });
     } else {
       onSave({
         ...context.item,
         name,
-        duration: duration ? Number(duration) : undefined
+        duration: itemValue || undefined
       });
     }
   };
@@ -154,22 +160,37 @@ export const EditPanel: React.FC<EditPanelProps> = ({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Duration ({getDurationUnit()})
-            </label>
-            <input
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={`Duration in ${getDurationUnit()}`}
-              min="1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Optional: Specify the duration for this {getTypeLabel().toLowerCase()}
-            </p>
-          </div>
+          {(context.type === 'period' || context.type === 'cycle' || context.type === 'week') ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Notes
+              </label>
+              <textarea
+                value={itemValue}
+                onChange={(e) => setItemValue(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                placeholder="Enter additional notes or description"
+                rows={3}
+              />
+            </div>
+          ) : context.type === 'day' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Duration ({getDurationUnit()})
+              </label>
+              <input
+                type="number"
+                value={itemValue}
+                onChange={(e) => setItemValue(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder={`Duration in ${getDurationUnit()}`}
+                min="1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Optional: Specify the duration for this {getTypeLabel().toLowerCase()}
+              </p>
+            </div>
+          ) : null}
         </>
       );
     }
@@ -202,7 +223,10 @@ export const EditPanel: React.FC<EditPanelProps> = ({
           <div className="space-y-1 text-xs text-gray-600">
             <div>ID: <span className="font-mono">{context.item.id}</span></div>
             <div>Type: <span className="capitalize">{context.type}</span></div>
-            {(context.item as any).duration && (
+            {(context.item as any).duration && (context.type === 'period' || context.type === 'cycle' || context.type === 'week') && (
+              <div>Current Notes: {(context.item as any).duration}</div>
+            )}
+            {(context.item as any).duration && context.type === 'day' && (
               <div>Current Duration: {(context.item as any).duration} {getDurationUnit()}</div>
             )}
           </div>
