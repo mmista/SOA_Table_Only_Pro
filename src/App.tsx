@@ -48,92 +48,63 @@ function App() {
 
     const { id: focusedId, type: focusedType } = focusedTimelineItem;
     
-    // Deep filtering function that preserves hierarchy
-    const filteredPeriods = soaData.periods.filter(period => {
-      if (focusedType === 'period') {
-        return period.id === focusedId;
-      }
+    // New precise filtering logic
+    const filteredPeriods: Period[] = [];
+    
+    for (const period of soaData.periods) {
+      // Check if this period should be included
+      let shouldIncludePeriod = false;
+      let filteredCycles: Cycle[] = [];
       
-      // Check if this period contains the focused item at any level
-      const containsFocusedItem = period.cycles.some(cycle => {
-        if (focusedType === 'cycle') {
-          return cycle.id === focusedId;
-        }
-        return cycle.weeks.some(week => {
-          if (focusedType === 'week') {
-            return week.id === focusedId;
-          }
-          return week.days.some(day => {
-            if (focusedType === 'day') {
-              return day.id === focusedId;
-            }
-            return false;
-          });
-        });
-      });
-      
-      return containsFocusedItem;
-    }).map(period => {
-      // If focusing on this specific period, return it as-is
       if (focusedType === 'period' && period.id === focusedId) {
-        return period;
+        // Focus on this specific period - include it entirely
+        shouldIncludePeriod = true;
+        filteredCycles = period.cycles;
+      } else {
+        // Check cycles within this period
+        for (const cycle of period.cycles) {
+          let shouldIncludeCycle = false;
+          let filteredWeeks: Week[] = [];
+          
+          if (focusedType === 'cycle' && cycle.id === focusedId) {
+            // Focus on this specific cycle - include it entirely
+            shouldIncludeCycle = true;
+            filteredWeeks = cycle.weeks;
+          } else {
+            // Check weeks within this cycle
+            for (const week of cycle.weeks) {
+              let shouldIncludeWeek = false;
+              let filteredDays = week.days;
+              
+              if (focusedType === 'week' && week.id === focusedId) {
+                // Focus on this specific week - include it entirely
+                shouldIncludeWeek = true;
+              } else if (focusedType === 'day') {
+                // Focus on a specific day - only include that day
+                const focusedDay = week.days.find(day => day.id === focusedId);
+                if (focusedDay) {
+                  shouldIncludeWeek = true;
+                  filteredDays = [focusedDay];
+                }
+              }
+              
+              if (shouldIncludeWeek) {
+                filteredWeeks.push({ ...week, days: filteredDays });
+              }
+            }
+          }
+          
+          if (shouldIncludeCycle || filteredWeeks.length > 0) {
+            filteredCycles.push({ ...cycle, weeks: filteredWeeks });
+            shouldIncludePeriod = true;
+          }
+        }
       }
       
-      // Otherwise, filter down to only the relevant cycles
-      const filteredCycles = period.cycles.filter(cycle => {
-        if (focusedType === 'cycle') {
-          return cycle.id === focusedId;
-        }
-        
-        // Check if this cycle contains the focused week or day
-        return cycle.weeks.some(week => {
-          if (focusedType === 'week') {
-            return week.id === focusedId;
-          }
-          return week.days.some(day => {
-            if (focusedType === 'day') {
-              return day.id === focusedId;
-            }
-            return false;
-          });
-        });
-      }).map(cycle => {
-        // If focusing on this specific cycle, return it as-is
-        if (focusedType === 'cycle' && cycle.id === focusedId) {
-          return cycle;
-        }
-        
-        // Otherwise, filter down to only the relevant weeks
-        const filteredWeeks = cycle.weeks.filter(week => {
-          if (focusedType === 'week') {
-            return week.id === focusedId;
-          }
-          return week.days.some(day => {
-            if (focusedType === 'day') {
-              return day.id === focusedId;
-            }
-            return false;
-          });
-        }).map(week => {
-          // If focusing on this specific week, return it as-is
-          if (focusedType === 'week' && week.id === focusedId) {
-            return week;
-          }
-          
-          // If focusing on a specific day, filter to only that day
-          if (focusedType === 'day') {
-            const filteredDays = week.days.filter(day => day.id === focusedId);
-            return { ...week, days: filteredDays };
-          }
-          
-          return week;
-        });
-        
-        return { ...cycle, weeks: filteredWeeks };
-      });
-      
-      return { ...period, cycles: filteredCycles };
-    });
+      if (shouldIncludePeriod) {
+        filteredPeriods.push({ ...period, cycles: filteredCycles });
+      }
+    }
 
     // Get all visible day IDs from the filtered structure
     const visibleDayIds = getAllDayIds(filteredPeriods);
