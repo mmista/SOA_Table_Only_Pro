@@ -251,6 +251,54 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
       dragState.draggedItem?.id !== activity.id &&
       (validateDrop(dragState.draggedType, 'activity', 'before') || validateDrop(dragState.draggedType, 'activity', 'after'));
     
+    // Helper function to check if a day should be rendered based on focus mode
+    const shouldRenderDay = (dayId: string) => {
+      // If no focus mode, render all days
+      if (!headerManagement.focusedHeaderType) return true;
+      
+      // Find the day and its parents
+      for (const period of data.periods) {
+        for (const cycle of period.cycles) {
+          for (const week of cycle.weeks) {
+            const day = week.days.find(d => d.id === dayId);
+            if (day) {
+              if (headerManagement.focusedHeaderType === 'period') {
+                const periodHeader = headerManagement.headers?.find(h => h.type === 'period');
+                return periodHeader?.isVisible || false;
+              } else if (headerManagement.focusedHeaderType === 'cycle') {
+                const cycleHeader = headerManagement.headers?.find(h => h.type === 'cycle');
+                return cycleHeader?.isVisible || false;
+              } else if (headerManagement.focusedHeaderType === 'week') {
+                const weekHeader = headerManagement.headers?.find(h => h.type === 'week');
+                return weekHeader?.isVisible || false;
+              }
+            }
+          }
+        }
+      }
+      
+      return true;
+    };
+
+    // Render day cell or thin strip for activity rows
+    const renderActivityDayCell = (day: any, cellContent: React.ReactNode, key: string) => {
+      const shouldRender = shouldRenderDay(day.id);
+      const dayHeader = headerManagement.headers?.find(h => h.type === 'day');
+      
+      if (!shouldRender || !dayHeader?.isVisible) {
+        return (
+          <td
+            key={key}
+            className="min-w-[24px] max-w-[24px] w-[24px] bg-gray-200 border border-gray-300"
+          >
+            {/* Empty thin strip for activity rows */}
+          </td>
+        );
+      }
+      
+      return cellContent;
+    };
+    
     return (
       <tr 
         key={activity.id} 
@@ -293,7 +341,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
                 const cellKey = getCellKey(activity.id, day.id);
                 const isSelectedCell = selectedActivityCells.has(cellKey);
                 
-                return (
+                return renderActivityDayCell(day, (
                   <ActivityCellComponent
                     key={`${activity.id}-${day.id}`}
                     isActive={cellData?.isActive || false}
@@ -315,7 +363,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
                     onMouseLeave={() => onActivityCellHover(null, null)}
                     onCustomTextChange={(newText) => onActivityCellCustomTextChange(activity.id, day.id, newText)}
                   />
-                );
+                ), `${activity.id}-${day.id}`);
               })
             )
           )

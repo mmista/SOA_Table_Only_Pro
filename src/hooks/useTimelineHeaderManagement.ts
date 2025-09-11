@@ -17,6 +17,8 @@ export interface TimelineHeaderManagement {
   inactiveHeaders: TimelineHeaderConfig[];
   editingHeaderId: string | null;
   isHiddenContainerExpanded: boolean;
+  focusedHeaderId: string | null;
+  focusedHeaderType: 'period' | 'cycle' | 'week' | null;
 }
 
 const DEFAULT_HEADERS: TimelineHeaderConfig[] = [
@@ -34,6 +36,8 @@ export const useTimelineHeaderManagement = () => {
   const [headers, setHeaders] = useState<TimelineHeaderConfig[]>(DEFAULT_HEADERS);
   const [editingHeaderId, setEditingHeaderId] = useState<string | null>(null);
   const [isHiddenContainerExpanded, setIsHiddenContainerExpanded] = useState(false);
+  const [focusedHeaderId, setFocusedHeaderId] = useState<string | null>(null);
+  const [focusedHeaderType, setFocusedHeaderType] = useState<'period' | 'cycle' | 'week' | null>(null);
 
   // Computed values
   const visibleHeaders = useMemo(() => 
@@ -76,6 +80,20 @@ export const useTimelineHeaderManagement = () => {
 
   // Header visibility
   const hideHeader = useCallback((headerId: string) => {
+    // If hiding a focused header, unfocus all first
+    if (focusedHeaderId === headerId) {
+      setFocusedHeaderId(null);
+      setFocusedHeaderType(null);
+      // Restore visibility to all active headers of the focused type
+      if (focusedHeaderType) {
+        setHeaders(prev => prev.map(header => 
+          header.isActive && header.type === focusedHeaderType
+            ? { ...header, isVisible: true }
+            : header
+        ));
+      }
+    }
+    
     setHeaders(prev => prev.map(header => 
       header.id === headerId && header.isActive
         ? { ...header, isVisible: false }
@@ -84,6 +102,19 @@ export const useTimelineHeaderManagement = () => {
   }, []);
 
   const showHeader = useCallback((headerId: string) => {
+    // If we're in focus mode and showing a header, exit focus mode first
+    if (focusedHeaderId && focusedHeaderType) {
+      setFocusedHeaderId(null);
+      setFocusedHeaderType(null);
+      // Restore visibility to all active headers of the focused type
+      setHeaders(prev => prev.map(header => 
+        header.isActive && header.type === focusedHeaderType
+          ? { ...header, isVisible: true }
+          : header
+      ));
+      return;
+    }
+    
     setHeaders(prev => prev.map(header => 
       header.id === headerId && header.isActive
         ? { ...header, isVisible: true }
@@ -114,9 +145,52 @@ export const useTimelineHeaderManagement = () => {
   }, []);
 
   const restoreAllHeaders = useCallback(() => {
+    setFocusedHeaderId(null);
+    setFocusedHeaderType(null);
     setHeaders(prev => prev.map(header => header.isActive ? { ...header, isVisible: true } : header));
     setIsHiddenContainerExpanded(false);
   }, []);
+
+  // Focus functionality
+  const focusHeader = useCallback((headerId: string, headerType: 'period' | 'cycle' | 'week') => {
+    // If already focused on this header, unfocus
+    if (focusedHeaderId === headerId) {
+      setFocusedHeaderId(null);
+      setFocusedHeaderType(null);
+      // Restore visibility to all active headers of this type
+      setHeaders(prev => prev.map(header => 
+        header.isActive && header.type === headerType
+          ? { ...header, isVisible: true }
+          : header
+      ));
+      return;
+    }
+    
+    // Set new focus
+    setFocusedHeaderId(headerId);
+    setFocusedHeaderType(headerType);
+    
+    // Hide all other headers of the same type, show only the focused one
+    setHeaders(prev => prev.map(header => {
+      if (header.isActive && header.type === headerType) {
+        return { ...header, isVisible: header.id === headerId };
+      }
+      return header;
+    }));
+  }, [focusedHeaderId]);
+
+  const unfocusAllHeaders = useCallback(() => {
+    if (focusedHeaderType) {
+      // Restore visibility to all active headers of the focused type
+      setHeaders(prev => prev.map(header => 
+        header.isActive && header.type === focusedHeaderType
+          ? { ...header, isVisible: true }
+          : header
+      ));
+    }
+    setFocusedHeaderId(null);
+    setFocusedHeaderType(null);
+  }, [focusedHeaderType]);
 
   return {
     // State
@@ -127,6 +201,8 @@ export const useTimelineHeaderManagement = () => {
     inactiveHeaders,
     editingHeaderId,
     isHiddenContainerExpanded,
+    focusedHeaderId,
+    focusedHeaderType,
     
     // Actions
     startEditingHeader,
@@ -138,6 +214,8 @@ export const useTimelineHeaderManagement = () => {
     enableHeader,
     toggleHiddenContainer,
     restoreAllHeaders,
+    focusHeader,
+    unfocusAllHeaders,
     
     // Computed
     hiddenCount: hiddenHeaders.length,

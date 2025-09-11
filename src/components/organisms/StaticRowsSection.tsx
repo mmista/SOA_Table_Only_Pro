@@ -89,6 +89,75 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
     return header ? (header.isActive && header.isVisible) : false;
   };
 
+  // Check if a day should be rendered based on focus mode
+  const shouldRenderDay = (dayId: string) => {
+    const dayHeader = getHeaderByType('day');
+    if (!dayHeader) return true;
+    
+    // If in focus mode, only render if this day is visible
+    if (headerManagement.focusedHeaderType === 'day') {
+      return dayHeader.isVisible;
+    }
+    
+    // Check parent visibility for focus modes
+    if (headerManagement.focusedHeaderType) {
+      // Find the parent of this day and check if it should be visible
+      for (const period of data.periods) {
+        for (const cycle of period.cycles) {
+          for (const week of cycle.weeks) {
+            const day = week.days.find(d => d.id === dayId);
+            if (day) {
+              if (headerManagement.focusedHeaderType === 'period') {
+                const periodHeader = headerManagement.headers?.find(h => h.type === 'period');
+                return periodHeader?.isVisible || false;
+              } else if (headerManagement.focusedHeaderType === 'cycle') {
+                const cycleHeader = headerManagement.headers?.find(h => h.type === 'cycle');
+                return cycleHeader?.isVisible || false;
+              } else if (headerManagement.focusedHeaderType === 'week') {
+                const weekHeader = headerManagement.headers?.find(h => h.type === 'week');
+                return weekHeader?.isVisible || false;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return true;
+  };
+
+  // Render day cell or thin strip
+  const renderDayCell = (day: any, content: React.ReactNode, key: string) => {
+    const shouldRender = shouldRenderDay(day.id);
+    const dayHeader = getHeaderByType('day');
+    
+    if (!shouldRender || !dayHeader?.isVisible) {
+      return (
+        <td
+          key={key}
+          className="min-w-[24px] max-w-[24px] w-[24px] bg-gray-200 border border-gray-300 text-center cursor-pointer hover:bg-gray-300 transition-colors"
+          onClick={() => {
+            if (headerManagement.focusedHeaderType) {
+              headerManagement.unfocusAllHeaders();
+            } else {
+              headerManagement.showHeader('day');
+            }
+          }}
+          title={`Show ${day.name}`}
+        >
+          <div className="flex flex-col items-center justify-center h-full py-1">
+            <Eye className="w-2 h-2 text-gray-600 mb-1" />
+            <span className="text-xs font-bold text-gray-600 transform -rotate-90 origin-center">
+              {day.name.charAt(0)}
+            </span>
+          </div>
+        </td>
+      );
+    }
+    
+    return content;
+  };
+
   return (
     <>
       {/* Time Relative Row */}
@@ -114,7 +183,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
               cycle.weeks.map(week =>
                 week.days.map((day) => {
                   const value = getCellValue(timeRelativeCells, day.id, 24);
-                  return (
+                  return renderDayCell(day, (
                     <StaticTableCell
                       key={`time-relative-${day.id}`}
                       content={value.toString()}
@@ -122,7 +191,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                       type="time-relative-cell"
                       onClick={onStaticCellClick}
                     />
-                  );
+                  ), `time-relative-${day.id}`);
                 })
               )
             )
@@ -163,7 +232,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                     return null;
                   }
                   
-                  return (
+                  return renderDayCell(day, (
                     <TimeWindowCell
                       key={`window-${day.id}`}
                       dayId={day.id}
@@ -177,7 +246,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                       onRightClick={(e) => onTimeWindowCellRightClick(e, day.id)}
                       onCustomTextChange={(newText) => onTimeWindowCellCustomTextChange(day.id, newText)}
                     />
-                  );
+                  ), `window-${day.id}`);
                 })
               )
             )
@@ -208,7 +277,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
               cycle.weeks.map(week =>
                 week.days.map((day) => {
                   const value = getCellValue(timeOfDayCells, day.id, 'Morning');
-                  return (
+                  return renderDayCell(day, (
                     <StaticTableCell
                       key={`time-${day.id}`}
                       content={value}
@@ -216,7 +285,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                       type="time-of-day-cell"
                       onClick={onStaticCellClick}
                     />
-                  );
+                  ), `time-${day.id}`);
                 })
               )
             )
@@ -253,7 +322,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                   const isHighlighted = shouldHighlightVisit(day.id);
                   const linkedVisitNumbers = getLinkedVisitNumbers(day.id);
                   
-                  return (
+                  return renderDayCell(day, (
                     <VisitLabelCell
                       key={`visit-${day.id}`}
                       visitNumber={visitNumber}
@@ -266,7 +335,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
                       onMouseLeave={() => handleVisitHover(null)}
                       onOpenVisitLinkPanel={onOpenVisitLinkPanel}
                     />
-                  );
+                  ), `visit-${day.id}`);
                 })
               )
             )

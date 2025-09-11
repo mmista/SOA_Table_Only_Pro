@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, Plus } from 'lucide-react';
+import { GripVertical, Plus, Eye, X } from 'lucide-react';
 import { EditableItemType } from '../types/soa';
 import { CommentIcon } from './CommentIcon';
 
@@ -12,6 +12,8 @@ interface DraggableCellProps {
   bgColor: string;
   isDragging: boolean;
   isHovered: boolean;
+  isVisible: boolean;
+  isFocused: boolean;
   isValidDropTarget: boolean;
   hoveredDropZone: string | null;
   hasComment?: boolean;
@@ -24,6 +26,9 @@ interface DraggableCellProps {
   onAddItem: (type: EditableItemType, id: string, side: 'left' | 'right') => void;
   setHoveredDropZone: (zoneId: string | null) => void;
   onCommentClick?: (e: React.MouseEvent) => void;
+  onRightClick?: (e: React.MouseEvent) => void;
+  onShowHeader?: (id: string) => void;
+  onUnfocusAllHeaders?: () => void;
 }
 
 export const DraggableCell: React.FC<DraggableCellProps> = ({
@@ -35,6 +40,8 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   bgColor,
   isDragging,
   isHovered,
+  isVisible,
+  isFocused,
   isValidDropTarget,
   hoveredDropZone,
   hasComment = false,
@@ -47,8 +54,29 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   onAddItem,
   setHoveredDropZone,
   onCommentClick
+  onRightClick,
+  onShowHeader,
+  onUnfocusAllHeaders
 }) => {
   const [dragOver, setDragOver] = useState<'before' | 'after' | 'inside' | null>(null);
+
+  // If not visible, render as thin strip
+  if (!isVisible) {
+    return (
+      <td
+        className="min-w-[24px] max-w-[24px] w-[24px] bg-gray-200 border border-gray-300 text-center cursor-pointer hover:bg-gray-300 transition-colors relative"
+        onClick={() => onShowHeader?.(item.id)}
+        title={`Show ${title}`}
+      >
+        <div className="flex flex-col items-center justify-center h-full py-1">
+          <Eye className="w-3 h-3 text-gray-600 mb-1" />
+          <span className="text-xs font-bold text-gray-600 transform -rotate-90 origin-center">
+            {title.charAt(0)}
+          </span>
+        </div>
+      </td>
+    );
+  }
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -93,6 +121,11 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
     }
     setDragOver(null);
     setHoveredDropZone(null);
+  };
+
+  const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onRightClick?.(e);
   };
 
   const getDropZoneStyle = () => {
@@ -149,6 +182,7 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
         group
         ${isDragging ? 'opacity-50 scale-95' : ''}
         ${isValidDropTarget ? 'ring-1 ring-blue-300' : ''}
+        ${isFocused ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
         ${getDropZoneStyle()}
       `}
       draggable
@@ -160,6 +194,7 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
+      onContextMenu={handleRightClick}
     >
       {/* Comment icon in top-right corner */}
       {onCommentClick && (
@@ -176,9 +211,25 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       )}
       
       {/* Drag Handle */}
-      <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
       </div>
+
+      {/* Focus Exit Button */}
+      {isFocused && onUnfocusAllHeaders && (
+        <div className="absolute top-1 right-8 z-20">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUnfocusAllHeaders();
+            }}
+            className="p-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-md"
+            title="Exit focus mode"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center">
@@ -205,6 +256,11 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
             <div className="absolute inset-0 bg-blue-100 bg-opacity-30 z-0" />
           )}
         </>
+      )}
+
+      {/* Focus indicator */}
+      {isFocused && (
+        <div className="absolute inset-0 border-2 border-blue-500 rounded pointer-events-none z-30" />
       )}
 
       {/* Add Buttons */}

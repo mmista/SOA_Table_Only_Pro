@@ -2,6 +2,7 @@ import React from 'react';
 import { SOAData, EditableItemType } from '../../types/soa';
 import { DraggableCell } from '../DraggableCell';
 import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
+import { TimelineHeaderContextMenu } from '../TimelineHeaderContextMenu';
 
 interface TimelineHeaderSectionProps {
   data: SOAData;
@@ -46,6 +47,15 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   hasComment,
   onCommentClick
 }) => {
+  const [contextMenuState, setContextMenuState] = React.useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    header: any;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    header: null
+  });
 
   // Helper function to get header by type from centralized state
   const getHeaderByType = (type: string) => {
@@ -58,6 +68,22 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     return header ? (header.isActive && header.isVisible) : false;
   };
 
+  const handleHeaderRightClick = (e: React.MouseEvent, item: any, type: EditableItemType) => {
+    e.preventDefault();
+    const headerConfig = headerManagement.headers?.find(h => h.type === type);
+    if (headerConfig) {
+      setContextMenuState({
+        isOpen: true,
+        position: { x: e.clientX, y: e.clientY },
+        header: { ...headerConfig, item }
+      });
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuState(prev => ({ ...prev, isOpen: false }));
+  };
+
   const renderDraggableCell = (
     title: string,
     colSpan: number,
@@ -66,6 +92,8 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     bgColor: string,
     subtitle?: string
   ) => {
+    const headerConfig = headerManagement.headers?.find(h => h.type === type);
+    const isVisible = headerConfig?.isVisible ?? true;
     const isHovered = hoveredItems[type] === item.id;
     const isDragging = dragState.isDragging && dragState.draggedItem?.id === item.id;
     const isValidDropTarget = dragState.isDragging && 
@@ -73,16 +101,20 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
       (validateDrop(dragState.draggedType, type, 'before') ||
        validateDrop(dragState.draggedType, type, 'after') ||
        validateDrop(dragState.draggedType, type, 'inside'));
+    const isFocused = headerManagement.focusedHeaderId === item.id;
+    const adjustedColSpan = isVisible ? colSpan : 1;
     
     return (
       <DraggableCell
         key={item.id}
         title={title}
         subtitle={subtitle}
-        colSpan={colSpan}
+        colSpan={adjustedColSpan}
         type={type}
         item={item}
         bgColor={bgColor}
+        isVisible={isVisible}
+        isFocused={isFocused}
         isDragging={isDragging}
         isHovered={isHovered}
         isValidDropTarget={isValidDropTarget}
@@ -96,6 +128,9 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         onClick={() => onItemClick(item, type)}
         onAddItem={onAddItem}
         setHoveredDropZone={setHoveredDropZone}
+        onRightClick={(e) => handleHeaderRightClick(e, item, type)}
+        onShowHeader={headerManagement.showHeader}
+        onUnfocusAllHeaders={headerManagement.unfocusAllHeaders}
         onCommentClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           onCommentClick(item.id, type, {
@@ -108,18 +143,35 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   };
 
   // Calculate colspan for periods
-  const getPeriodColspan = (period: any): number => {
+  const getPeriodColspan = (period: any, considerVisibility: boolean = true): number => {
     return period.cycles.reduce((total: number, cycle: any) => {
       return total + cycle.weeks.reduce((weekTotal: number, week: any) => {
-        return weekTotal + week.days.length;
+        return weekTotal + week.days.reduce((dayTotal: number, day: any) => {
+          if (!considerVisibility) return dayTotal + 1;
+          const dayHeader = headerManagement.headers?.find(h => h.type === 'day');
+          return dayTotal + (dayHeader?.isVisible ? 1 : 1); // Always count as 1 for layout
+        }, 0);
       }, 0);
     }, 0);
   };
 
   // Calculate colspan for cycles
-  const getCycleColspan = (cycle: any): number => {
+  const getCycleColspan = (cycle: any, considerVisibility: boolean = true): number => {
     return cycle.weeks.reduce((total: number, week: any) => {
-      return total + week.days.length;
+      return total + week.days.reduce((dayTotal: number, day: any) => {
+        if (!considerVisibility) return dayTotal + 1;
+        const dayHeader = headerManagement.headers?.find(h => h.type === 'day');
+        return dayTotal + (dayHeader?.isVisible ? 1 : 1); // Always count as 1 for layout
+      }, 0);
+    }, 0);
+  };
+
+  // Calculate colspan for weeks
+  const getWeekColspan = (week: any, considerVisibility: boolean = true): number => {
+    return week.days.reduce((total: number, day: any) => {
+      if (!considerVisibility) return total + 1;
+      const dayHeader = headerManagement.headers?.find(h => h.type === 'day');
+      return total + (dayHeader?.isVisible ? 1 : 1); // Always count as 1 for layout
     }, 0);
   };
 
@@ -135,6 +187,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   };
 
   return (
+    <>
     <thead>
       {/* Period Row */}
       {isHeaderVisible('period') && (
@@ -157,7 +210,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
           {data.periods.map(period => 
             renderDraggableCell(
               period.name,
-              getPeriodColspan(period),
+              getPeriodColspan(period, true),
               'period',
               period,
               'bg-blue-100',
@@ -189,7 +242,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
             period.cycles.map(cycle => 
               renderDraggableCell(
                 cycle.name,
-                getCycleColspan(cycle),
+                getCycleColspan(cycle, true),
                 'cycle',
                 cycle,
                 'bg-green-100',
@@ -223,7 +276,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
               cycle.weeks.map(week =>
                 renderDraggableCell(
                   week.name,
-                  week.days.length,
+                  getWeekColspan(week, true),
                   'week',
                   week,
                   'bg-orange-100',
@@ -272,5 +325,19 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         </tr>
       )}
     </thead>
+    
+    {/* Context Menu */}
+    <TimelineHeaderContextMenu
+      isOpen={contextMenuState.isOpen}
+      position={contextMenuState.position}
+      header={contextMenuState.header}
+      isFocused={headerManagement.focusedHeaderId === contextMenuState.header?.item?.id}
+      onHide={headerManagement.hideHeader}
+      onShow={headerManagement.showHeader}
+      onFocus={headerManagement.focusHeader}
+      onUnfocus={headerManagement.unfocusAllHeaders}
+      onClose={handleCloseContextMenu}
+    />
+    </>
   );
 };
