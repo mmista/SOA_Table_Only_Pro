@@ -1513,8 +1513,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
             headerManagement.showHeader(headerId);
           }
         }}
-        onDisableHeader={headerManagement.disableHeader}
-        onEnableHeader={headerManagement.enableHeader}
+        onDisableHeader={headerManagement.toggleActive}
+        onEnableHeader={headerManagement.toggleActive}
       />
       
       <CommentModal
