@@ -49,6 +49,7 @@ interface VisitLinkPanelState {
 
 export const SOATable: React.FC<SOATableProps> = ({ 
   data, 
+  displayData,
   onDataChange, 
   headerManagement,
   isFocusModeActive,
