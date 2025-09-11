@@ -571,6 +571,7 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
       day: {
         week: ['inside'],
         day: ['before', 'after']
+      },
       activity: {
         activity: ['before', 'after'],
         'activity-group': ['before', 'after']
@@ -578,15 +579,6 @@ export const useDragDrop = (data: SOAData, onDataChange: (data: SOAData) => void
       'activity-group': {
         'activity-group': ['before', 'after'],
         activity: ['before', 'after']
-      }
-      activity: {
-        activity: ['before', 'after'],
-        'activity-group': ['before', 'after']
-      },
-      'activity-group': {
-        'activity-group': ['before', 'after'],
-        activity: ['before', 'after']
-      }
       }
     };
     
