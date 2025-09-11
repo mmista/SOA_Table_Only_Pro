@@ -127,29 +127,21 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   ) => {
     const isHovered = hoveredItems[type] === item.id;
     const isDragging = dragState.isDragging && dragState.draggedItem?.id === item.id;
-    const isMinimized = headerManagement.isHeaderMinimized(item.id);
     const isFocused = headerManagement.isHeaderFocused(item.id);
     const isValidDropTarget = dragState.isDragging && 
-      dragState.draggedItem?.id !== item.id &&
-      (validateDrop(dragState.draggedType, type, 'before') ||
-       validateDrop(dragState.draggedType, type, 'after') ||
-       validateDrop(dragState.draggedType, type, 'inside'));
-    
-    // Calculate dynamic colSpan based on minimized state
-    const dynamicColSpan = isMinimized ? 1 : colSpan;
+      dragState.draggedItem?.id !== item.id;
     
     return (
       <DraggableCell
         key={item.id}
         title={title}
         subtitle={subtitle}
-        colSpan={dynamicColSpan}
+        colSpan={colSpan}
         type={type}
         item={item}
         bgColor={bgColor}
         isDragging={isDragging}
         isHovered={isHovered}
-        isMinimized={isMinimized}
         isFocused={isFocused}
         isValidDropTarget={isValidDropTarget}
         hoveredDropZone={dragState.hoveredDropZone}
@@ -157,7 +149,6 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         onDrop={onDrop}
-        onUnminimize={headerManagement.unminimizeHeader}
         onUnfocus={headerManagement.unfocusHeader}
         onMouseEnter={() => onItemHover(type, item.id)}
         onMouseLeave={() => onItemHover(type, null)}
