@@ -239,7 +239,6 @@ export const SOATable: React.FC<SOATableProps> = ({
       const newActiveState = !cellData?.isActive;
       
       updateActivityCell(activityId, dayId, { isActive: newActiveState });
-      setSelectedActivityCells(new Set([cellKey]));
     }
     
     setLastSelectedCell(cellKey);
@@ -803,13 +802,11 @@ export const SOATable: React.FC<SOATableProps> = ({
 
   // Timeline item operations
   const handleItemClick = useCallback((item: any, type: EditableItemType) => {
-    if (headerManagement.isFocusMode) {
-      // If already in focus mode, exit focus mode
-      headerManagement.unfocusHeader();
-    } else {
-      // Enter focus mode for this item
-      headerManagement.focusHeader(item.id, type);
-    }
+    // Open edit panel for timeline items instead of toggling focus mode
+    setEditContext({
+      type,
+      item
+    });
   }, [headerManagement]);
 
   const handleItemHover = useCallback((type: EditableItemType, id: string | null) => {
