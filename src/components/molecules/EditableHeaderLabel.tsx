@@ -59,7 +59,7 @@ export const EditableHeaderLabel: React.FC<EditableHeaderLabelProps> = ({
 
   const handleToggleVisibility = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleVisibility(id);
+    onToggleVisibility(id); // This now calls hideHeaderRow
   };
 
   if (!isVisible) {

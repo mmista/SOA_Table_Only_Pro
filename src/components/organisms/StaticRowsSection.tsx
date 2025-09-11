@@ -1,5 +1,5 @@
 import React from 'react';
-import { SOAData, TimeRelativeCell, TimeWindowCell as TimeWindowCellInterface, TimeOfDayCell, EditableItemType } from '../../types/soa';
+import { SOAData, TimeRelativeCell, TimeWindowCell as TimeWindowCellInterface, TimeOfDayCell, EditableItemType, Period, Cycle, Week, Day } from '../../types/soa';
 import { TimelineHeaderConfig, useTimelineHeaderManagement } from '../../hooks/useTimelineHeaderManagement';
 import { StaticTableCell } from '../molecules/StaticTableCell';
 import { VisitLabelCell } from '../molecules/VisitLabelCell';
@@ -47,6 +47,82 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   onOpenVisitLinkPanel
 }) => {
 
+  // Filter data based on focus mode (same logic as TimelineHeaderSection)
+  const getFilteredData = React.useCallback((originalData: SOAData): SOAData => {
+    if (!headerManagement.isFocusMode || !headerManagement.focusedHeaderId || !headerManagement.focusedHeaderType) {
+      return originalData;
+    }
+
+    const focusedId = headerManagement.focusedHeaderId;
+    const focusedType = headerManagement.focusedHeaderType;
+
+    // Create a deep copy of the data
+    const filteredData: SOAData = {
+      ...originalData,
+      periods: []
+    };
+
+    // Filter based on focused header type and ID
+    for (const period of originalData.periods) {
+      if (focusedType === 'period' && period.id === focusedId) {
+        filteredData.periods.push(period);
+        break;
+      }
+      
+      const filteredPeriod: Period = { ...period, cycles: [] };
+      let shouldIncludePeriod = false;
+
+      for (const cycle of period.cycles) {
+        if (focusedType === 'cycle' && cycle.id === focusedId) {
+          filteredPeriod.cycles.push(cycle);
+          shouldIncludePeriod = true;
+          break;
+        }
+        
+        const filteredCycle: Cycle = { ...cycle, weeks: [] };
+        let shouldIncludeCycle = false;
+
+        for (const week of cycle.weeks) {
+          if (focusedType === 'week' && week.id === focusedId) {
+            filteredCycle.weeks.push(week);
+            shouldIncludeCycle = true;
+            break;
+          }
+          
+          const filteredWeek: Week = { ...week, days: [] };
+          let shouldIncludeWeek = false;
+
+          for (const day of week.days) {
+            if (focusedType === 'day' && day.id === focusedId) {
+              filteredWeek.days.push(day);
+              shouldIncludeWeek = true;
+              break;
+            }
+          }
+
+          if (shouldIncludeWeek) {
+            filteredCycle.weeks.push(filteredWeek);
+            shouldIncludeCycle = true;
+          }
+        }
+
+        if (shouldIncludeCycle) {
+          filteredPeriod.cycles.push(filteredCycle);
+          shouldIncludePeriod = true;
+        }
+      }
+
+      if (shouldIncludePeriod) {
+        filteredData.periods.push(filteredPeriod);
+      }
+    }
+
+    return filteredData;
+  }, [headerManagement.isFocusMode, headerManagement.focusedHeaderId, headerManagement.focusedHeaderType]);
+
+  // Get current data (filtered or original)
+  const currentData = React.useMemo(() => getFilteredData(data), [data, getFilteredData]);
+
   // Helper function to get cell value by dayId
   const getCellValue = (cells: any[], dayId: string, defaultValue: string) => {
     const cell = cells.find(c => c.dayId === dayId);
@@ -54,10 +130,11 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   };
 
   // Calculate visit number for a given day
-  const calculateVisitNumber = (targetDayId: string): number => {
+  const calculateVisitNumber = (targetDayId: string, useCurrentData: boolean = true): number => {
+    const dataToUse = useCurrentData ? currentData : data;
     let visitNumber = 1;
     
-    for (const period of data.periods) {
+    for (const period of dataToUse.periods) {
       for (const cycle of period.cycles) {
         for (const week of cycle.weeks) {
           for (const day of week.days) {
@@ -76,7 +153,8 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
   // Get linked visit numbers for tooltip
   const getLinkedVisitNumbers = (dayId: string): number[] => {
     const linkedDayIds = getLinkedVisits(dayId);
-    return linkedDayIds.map(linkedDayId => calculateVisitNumber(linkedDayId));
+    // Use original data for visit numbers to maintain consistency
+    return linkedDayIds.map(linkedDayId => calculateVisitNumber(linkedDayId, false));
   };
 
   // Check if a header type should be visible
@@ -148,7 +226,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
               />
             );
           })()}
-          {data.periods.map(period =>
+          {currentData.periods.map(period =>
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
@@ -247,7 +325,7 @@ export const StaticRowsSection: React.FC<StaticRowsSectionProps> = ({
             period.cycles.map(cycle =>
               cycle.weeks.map(week =>
                 week.days.map((day) => {
-                  const visitNumber = calculateVisitNumber(day.id);
+                  const visitNumber = calculateVisitNumber(day.id, false); // Use original data for consistent numbering
                   const isLinked = isVisitLinked(day.id);
                   const linkInfo = getVisitLinkInfo(day.id);
                   const isHighlighted = shouldHighlightVisit(day.id);
