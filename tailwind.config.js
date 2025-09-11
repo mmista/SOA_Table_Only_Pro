@@ -2,11 +2,7 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
-    extend: {
-      colors: {
-        'bolt-blue': '#0B41CD',
-      },
-    },
+    extend: {},
   },
   plugins: [],
 };
