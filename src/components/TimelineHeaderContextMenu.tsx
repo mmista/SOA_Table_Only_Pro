@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Eye, EyeOff, Focus, Unfocus } from 'lucide-react';
+import { Eye, EyeOff, Focus, Focus as Unfocus } from 'lucide-react';
 import { TimelineHeaderConfig } from '../hooks/useTimelineHeaderManagement';
 
 interface TimelineHeaderContextMenuProps {
