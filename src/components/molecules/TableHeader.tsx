@@ -18,10 +18,13 @@ interface TableHeaderProps {
   showMoveSuccess: boolean;
   canUndo: boolean;
   historyLength: number;
+  isFocusModeActive: boolean;
+  focusedTimelineItem: { id: string; type: string } | null;
   onUndo: () => void;
   onOpenHeaderSettings: () => void;
   onLoadSampleData: () => void;
   onClearData: () => void;
+  onExitFocus: () => void;
 }
 
 export const TableHeader: React.FC<TableHeaderProps> = ({
@@ -34,16 +37,34 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   showMoveSuccess,
   canUndo,
   historyLength,
+  isFocusModeActive,
+  focusedTimelineItem,
   onUndo,
   onOpenHeaderSettings,
   onLoadSampleData,
-  onClearData
+  onClearData,
+  onExitFocus
 }) => {
+  const getFocusedItemName = () => {
+    if (!focusedTimelineItem) return '';
+    const typeLabel = focusedTimelineItem.type.charAt(0).toUpperCase() + focusedTimelineItem.type.slice(1);
+    return `${typeLabel} Focus Active`;
+  };
+
   return (
     <div className="p-4 bg-gray-800 text-white flex items-center justify-between">
       <div>
         <h1 className="text-xl font-bold flex items-center space-x-2">
           <span>{title}</span>
+          
+          {isFocusModeActive && (
+            <StatsBadge
+              icon={<Search className="w-3 h-3" />}
+              count={1}
+              label={getFocusedItemName()}
+              colorClass="bg-yellow-100 text-yellow-700"
+            />
+          )}
           
           <StatsBadge
             icon={<MessageSquare className="w-3 h-3" />}
@@ -84,6 +105,17 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       </div>
       
       <div className="flex items-center space-x-2">
+        {isFocusModeActive && (
+          <button
+            onClick={onExitFocus}
+            className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-yellow-600 hover:bg-yellow-700 text-white"
+            title="Exit Focus Mode"
+          >
+            <Search className="w-4 h-4" />
+            <span>Exit Focus</span>
+          </button>
+        )}
+        
         <button
           onClick={onLoadSampleData}
           className="flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors bg-gray-700 hover:bg-gray-600 text-white"

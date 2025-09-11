@@ -15,6 +15,7 @@ interface DraggableCellProps {
   isValidDropTarget: boolean;
   hoveredDropZone: string | null;
   hasComment?: boolean;
+  isFocused?: boolean;
   onDragStart: (item: any, type: EditableItemType) => void;
   onDragEnd: () => void;
   onDrop: (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => void;
@@ -24,6 +25,8 @@ interface DraggableCellProps {
   onAddItem: (type: EditableItemType, id: string, side: 'left' | 'right') => void;
   setHoveredDropZone: (zoneId: string | null) => void;
   onCommentClick?: (e: React.MouseEvent) => void;
+  onRightClick?: (e: React.MouseEvent, item: any, type: EditableItemType) => void;
+  onExitFocus?: () => void;
 }
 
 export const DraggableCell: React.FC<DraggableCellProps> = ({
@@ -38,6 +41,7 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   isValidDropTarget,
   hoveredDropZone,
   hasComment = false,
+  isFocused = false,
   onDragStart,
   onDragEnd,
   onDrop,
@@ -46,7 +50,9 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
   onClick,
   onAddItem,
   setHoveredDropZone,
-  onCommentClick
+  onCommentClick,
+  onRightClick,
+  onExitFocus
 }) => {
   const [dragOver, setDragOver] = useState<'before' | 'after' | 'inside' | null>(null);
 
@@ -95,6 +101,20 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
     setHoveredDropZone(null);
   };
 
+  const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onRightClick) {
+      onRightClick(e, item, type);
+    }
+  };
+
+  const handleExitFocus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onExitFocus) {
+      onExitFocus();
+    }
+  };
+
   const getDropZoneStyle = () => {
     if (!dragOver || !isValidDropTarget) return '';
     
@@ -139,13 +159,25 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       default: return 'text-xs font-normal text-gray-500';
     }
   };
+
+  const getFocusedStyle = () => {
+    if (!isFocused) return '';
+    
+    switch (type) {
+      case 'period': return 'bg-blue-200 border-blue-400 border-2 ring-2 ring-blue-500 ring-opacity-50';
+      case 'cycle': return 'bg-green-200 border-green-400 border-2 ring-2 ring-green-500 ring-opacity-50';
+      case 'week': return 'bg-orange-200 border-orange-400 border-2 ring-2 ring-orange-500 ring-opacity-50';
+      default: return 'bg-gray-200 border-gray-400 border-2 ring-2 ring-gray-500 ring-opacity-50';
+    }
+  };
+
   return (
     <td
       key={item.id}
       colSpan={colSpan}
       className={`
         relative border border-gray-300 px-3 py-2 text-center text-sm font-medium 
-        ${bgColor} cursor-pointer hover:bg-opacity-80 transition-all duration-200 
+        ${isFocused ? getFocusedStyle() : bgColor} cursor-pointer hover:bg-opacity-80 transition-all duration-200 
         group
         ${isDragging ? 'opacity-50 scale-95' : ''}
         ${isValidDropTarget ? 'ring-1 ring-blue-300' : ''}
@@ -160,6 +192,8 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
+      onContextMenu={handleRightClick}
+      title={isFocused ? `Currently focused on ${type}: ${item.name}. Click X to exit focus mode.` : undefined}
     >
       {/* Comment icon in top-right corner */}
       {onCommentClick && (
@@ -175,6 +209,19 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
         </div>
       )}
       
+      {/* Focus exit button */}
+      {isFocused && onExitFocus && (
+        <div className="absolute top-1 right-8 z-[5]">
+          <button
+            onClick={handleExitFocus}
+            className="p-1 text-gray-600 hover:text-gray-800 hover:bg-white hover:bg-opacity-75 rounded-full transition-colors"
+            title="Exit focus mode"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+      
       {/* Drag Handle */}
       <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical className={`w-3 h-3 ${getTypeColor()}`} />
@@ -182,6 +229,12 @@ export const DraggableCell: React.FC<DraggableCellProps> = ({
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center">
+        {isFocused && (
+          <div className="flex items-center space-x-1 mb-1">
+            <Search className={`w-3 h-3 ${getTypeColor()}`} />
+            <span className="text-xs font-medium text-gray-600 uppercase">FOCUSED</span>
+          </div>
+        )}
         <div className={getTitleStyle()}>
           {title}
         </div>
