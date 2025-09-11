@@ -39,6 +39,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
   onDragStart,
   onDragEnd,
   onDrop,
+  onItemHover,
   onItemClick,
   onAddItem,
   setHoveredDropZone,
