@@ -257,7 +257,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     // Helper function to check if a day should be rendered based on focus mode
     const shouldRenderDay = (dayId: string) => {
       // If no focus mode, render all days
-      if (!headerManagement.focusedHeaderType) return true;
+      if (!headerManagement?.focusedHeaderType) return true;
       
       // Find the day and its parents
       for (const period of data.periods) {
@@ -265,14 +265,14 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
           for (const week of cycle.weeks) {
             const day = week.days.find(d => d.id === dayId);
             if (day) {
-              if (headerManagement.focusedHeaderType === 'period') {
-                const periodHeader = headerManagement.headers?.find(h => h.type === 'period');
+              if (headerManagement?.focusedHeaderType === 'period') {
+                const periodHeader = headerManagement?.headers?.find(h => h.type === 'period');
                 return periodHeader?.isVisible || false;
-              } else if (headerManagement.focusedHeaderType === 'cycle') {
-                const cycleHeader = headerManagement.headers?.find(h => h.type === 'cycle');
+              } else if (headerManagement?.focusedHeaderType === 'cycle') {
+                const cycleHeader = headerManagement?.headers?.find(h => h.type === 'cycle');
                 return cycleHeader?.isVisible || false;
-              } else if (headerManagement.focusedHeaderType === 'week') {
-                const weekHeader = headerManagement.headers?.find(h => h.type === 'week');
+              } else if (headerManagement?.focusedHeaderType === 'week') {
+                const weekHeader = headerManagement?.headers?.find(h => h.type === 'week');
                 return weekHeader?.isVisible || false;
               }
             }
@@ -286,7 +286,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     // Render day cell or thin strip for activity rows
     const renderActivityDayCell = (day: any, cellContent: React.ReactNode, key: string) => {
       const shouldRender = shouldRenderDay(day.id);
-      const dayHeader = headerManagement.headers?.find(h => h.type === 'day');
+      const dayHeader = headerManagement?.headers?.find(h => h.type === 'day');
       
       if (!shouldRender || !dayHeader?.isVisible) {
         return (
