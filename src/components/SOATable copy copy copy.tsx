@@ -131,10 +131,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   // Debug logging
   const logActivityState = (context: string) => {
     console.log(`=== ${context} ===`);
-    console.log('Current activities count:', data.activities?.length || 0);
-    if (data.activities && data.activities.length > 0) {
-      console.log('First activity cells count:', data.activities[0].cells.length);
-      console.log('Sample day IDs from activities:', data.activities[0].cells.slice(0, 5).map(c => c.dayId));
+    console.log('Current activities count:', activities.length);
+    if (activities.length > 0) {
+      console.log('First activity cells count:', activities[0].cells.length);
+      console.log('Sample day IDs from activities:', activities[0].cells.slice(0, 5).map(c => c.dayId));
     }
     
     const allDays: string[] = [];
@@ -202,7 +202,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
 
   // Helper function to get activity and day indices
   const getActivityDayIndices = (activityId: string, dayId: string) => {
-    const activityIndex = (data.activities || []).findIndex(a => a.id === activityId);
+    const activityIndex = activities.findIndex(a => a.id === activityId);
     if (activityIndex === -1) return null;
 
     const allDays: Day[] = [];
@@ -226,9 +226,136 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     return cell && ((cell.colspan && cell.colspan > 1) || (cell.rowspan && cell.rowspan > 1));
   };
 
+  // Initialize activities data
+  React.useEffect(() => {
+    console.log('🔄 Activities useEffect triggered');
+    logActivityState('BEFORE ACTIVITIES RECREATION');
+    
+    // Get all days from the data structure
+    const allDays: Day[] = [];
+    data.periods.forEach(period => {
+      period.cycles.forEach(cycle => {
+        cycle.weeks.forEach(week => {
+          allDays.push(...week.days);
+        });
+      });
+    });
+
+    console.log('📊 Current activities count:', activities.length);
+    
+    // If no activities exist, create initial ones
+    if (activities.length === 0) {
+      console.log('🆕 Creating initial activities');
+      const trialActivities = [
+        { description: 'Informed Consent', category: 'visit' as const },
+        { description: 'Medical History', category: 'visit' as const },
+        { description: 'Physical Examination', category: 'visit' as const },
+        { description: 'Vital Signs', category: 'visit' as const },
+        { description: 'Laboratory Tests', category: 'lab' as const },
+        { description: 'ECG', category: 'other' as const },
+        { description: 'Drug Administration', category: 'other' as const },
+        { description: 'Adverse Event Assessment', category: 'questionnaire' as const }
+      ];
+
+      const initialActivities: ActivityData[] = trialActivities.map((activity, activityIndex) => ({
+        id: `activity-${activityIndex}`,
+        description: activity.description,
+        category: activity.category,
+        cells: allDays.map((day, dayIndex) => {
+          const activityName = activity.description;
+          let isActive = false;
+          let visitType: VisitType | undefined;
+          let footnote: string | undefined;
+          let customText: string | undefined;
+          
+          if (activityName === 'Informed Consent' && dayIndex === 0) {
+            isActive = true;
+            visitType = 'in-person';
+            footnote = 'a';
+          }
+          if (activityName === 'Medical History' && dayIndex === 0) {
+            isActive = true;
+            visitType = 'in-person';
+            footnote = 'a';
+          }
+          if (activityName === 'Physical Examination' && (dayIndex === 0 || dayIndex % 7 === 0)) {
+            isActive = true;
+            visitType = 'in-person';
+            footnote = String.fromCharCode(97 + (dayIndex % 4)); // a, b, c, d
+          }
+          if (activityName === 'Vital Signs' && dayIndex % 2 === 0) {
+            isActive = true;
+            visitType = dayIndex % 4 === 0 ? 'in-person' : 'remote-assessment';
+            footnote = dayIndex < 4 ? 'a' : undefined;
+            if (dayIndex === 1) customText = 'Baseline';
+          }
+          if (activityName === 'Laboratory Tests' && (dayIndex === 0 || dayIndex === 7 || dayIndex === 14)) {
+            isActive = true;
+            visitType = 'in-person';
+            footnote = 'x';
+          }
+          if (activityName === 'ECG' && (dayIndex === 0 || dayIndex === 7 || dayIndex === 14)) {
+            isActive = true;
+            visitType = 'in-person';
+            footnote = 'x';
+          }
+          if (activityName === 'Drug Administration' && dayIndex > 0 && dayIndex < 15) {
+            isActive = true;
+            visitType = 'drug-shipment';
+          }
+          if (activityName === 'Adverse Event Assessment' && dayIndex > 0) {
+            isActive = true;
+            visitType = dayIndex % 3 === 0 ? 'phone-call' : 'remote-assessment';
+          }
+          
+          return {
+            dayId: day.id,
+            isActive,
+            visitType,
+            footnote,
+            customText
+          };
+        })
+      }));
+
+      setActivities(initialActivities);
+    } else {
+      console.log('🔄 Updating existing activities to match new day structure');
+      
+      // Update existing activities to match the new day structure
+      setActivities(prevActivities => {
+        return prevActivities.map(activity => {
+          // Create a map of existing cells by dayId for quick lookup
+          const existingCellsMap = new Map(
+            activity.cells.map(cell => [cell.dayId, cell])
+          );
+          
+          // Create new cells array matching the current day structure
+          const newCells = allDays.map(day => {
+            // If we have existing data for this day, keep it
+            const existingCell = existingCellsMap.get(day.id);
+            if (existingCell) {
+              return existingCell;
+            }
+            
+            // Otherwise create a new inactive cell
+            return {
+              dayId: day.id,
+              isActive: false
+            };
+          });
+          
+          return {
+            ...activity,
+            cells: newCells
+          };
+        });
+      });
+    }
+  }, [data]);
 
   const handleActivityEdit = (activityId: string) => {
-    const activity = data.activities?.find(a => a.id === activityId);
+    const activity = activities.find(a => a.id === activityId);
     if (activity) {
       setEditingActivity(activityId);
       setEditValues({ description: activity.description });
@@ -236,16 +363,11 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   };
 
   const handleActivitySave = (activityId: string, newDescription: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => 
+    setActivities(prev => prev.map(activity => 
       activity.id === activityId 
         ? { ...activity, description: newDescription }
         : activity
-    );
-    
-    onDataChange(newData);
+    ));
     setEditingActivity(null);
     setEditValues({});
   };
@@ -271,11 +393,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         )
       )
     };
-    
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    newData.activities = [...newData.activities, newActivity];
-    onDataChange(newData);
+    setActivities(prev => [...prev, newActivity]);
   };
 
   // Activity Header Selection and Grouping Functions
@@ -291,9 +409,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         }
         return newSet;
       });
-    } else {
-      // Regular click - clear selection and select this activity
-      setSelectedActivityHeaders(new Set([activityId]));
     }
   };
 
@@ -315,7 +430,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
 
   const handleActivityGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
     e.preventDefault();
-    const group = data.activityGroups?.find(g => g.id === groupId);
+    const group = activityGroups.find(g => g.id === groupId);
     setGroupHeaderContextMenu({
       isOpen: true,
       position: { x: e.clientX, y: e.clientY },
@@ -327,7 +442,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const generateGroupId = () => `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   const getNextGroupNumber = () => {
-    const existingNumbers = (data.activityGroups || [])
+    const existingNumbers = activityGroups
       .map(group => {
         const match = group.name.match(/^Group (\d+)$/);
         return match ? parseInt(match[1]) : 0;
@@ -343,7 +458,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     const groupId = generateGroupId();
     const groupNumber = getNextGroupNumber();
     const defaultColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-    const defaultColor = defaultColors[(data.activityGroups?.length || 0) % defaultColors.length];
+    const defaultColor = defaultColors[activityGroups.length % defaultColors.length];
     
     const newGroup: ActivityGroup = {
       id: groupId,
@@ -352,42 +467,30 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       activityIds: Array.from(selectedActivityHeaders)
     };
     
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
     // Update activities with group ID
-    newData.activities = newData.activities.map(activity => 
+    setActivities(prev => prev.map(activity => 
       selectedActivityHeaders.has(activity.id) 
         ? { ...activity, groupId }
         : activity
-    );
+    ));
     
     // Add new group
-    newData.activityGroups = [...newData.activityGroups, newGroup];
-    
-    onDataChange(newData);
+    setActivityGroups(prev => [...prev, newGroup]);
     
     // Clear selection
     setSelectedActivityHeaders(new Set());
   };
 
   const ungroupActivityGroup = (groupId: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
     // Remove group ID from activities
-    newData.activities = newData.activities.map(activity => 
+    setActivities(prev => prev.map(activity => 
       activity.groupId === groupId 
         ? { ...activity, groupId: undefined }
         : activity
-    );
+    ));
     
     // Remove group
-    newData.activityGroups = newData.activityGroups.filter(group => group.id !== groupId);
-    
-    onDataChange(newData);
+    setActivityGroups(prev => prev.filter(group => group.id !== groupId));
     
     // Remove from collapsed groups if it was collapsed
     setCollapsedGroups(prev => {
@@ -398,29 +501,19 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   };
 
   const renameActivityGroup = (groupId: string, newName: string) => {
-    const newData = { ...data };
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
-    newData.activityGroups = newData.activityGroups.map(group => 
+    setActivityGroups(prev => prev.map(group => 
       group.id === groupId 
         ? { ...group, name: newName }
         : group
-    );
-    
-    onDataChange(newData);
+    ));
   };
 
   const changeActivityGroupColor = (groupId: string, newColor: string) => {
-    const newData = { ...data };
-    if (!newData.activityGroups) newData.activityGroups = [];
-    
-    newData.activityGroups = newData.activityGroups.map(group => 
+    setActivityGroups(prev => prev.map(group => 
       group.id === groupId 
         ? { ...group, color: newColor }
         : group
-    );
-    
-    onDataChange(newData);
+    ));
   };
 
   const toggleGroupCollapse = (groupId: string) => {
@@ -436,11 +529,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   };
 
   const handleRemoveActivity = (activityId: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.filter(activity => activity.id !== activityId);
-    onDataChange(newData);
+    setActivities(prev => prev.filter(activity => activity.id !== activityId));
   };
 
   const getTotalDays = () => {
@@ -722,8 +811,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           // Select rectangular range
           for (let aIdx = minActivityIndex; aIdx <= maxActivityIndex; aIdx++) {
             for (let dIdx = minDayIndex; dIdx <= maxDayIndex; dIdx++) {
-              if (data.activities && data.activities[aIdx] && allDays[dIdx]) {
-                newSelection.add(getCellKey(data.activities[aIdx].id, allDays[dIdx].id));
+              if (activities[aIdx] && allDays[dIdx]) {
+                newSelection.add(getCellKey(activities[aIdx].id, allDays[dIdx].id));
               }
             }
           }
@@ -739,10 +828,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       // Get all linked visits for this day
       const linkedVisits = getLinkedVisits(dayId);
       
-      const newData = { ...data };
-      if (!newData.activities) newData.activities = [];
-      
-      newData.activities = newData.activities.map(activity => {
+      setActivities(prev => prev.map(activity => {
         if (activity.id === activityId) {
           return {
             ...activity,
@@ -763,9 +849,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           };
         }
         return activity;
-      });
-      
-      onDataChange(newData);
+      }));
     }
   };
 
@@ -795,10 +879,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     // Get all linked visits for this day
     const linkedVisits = getLinkedVisits(visitTypeSelector.dayId);
     
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
+    setActivities(prev => prev.map(activity => {
       if (activity.id === visitTypeSelector.activityId) {
         return {
           ...activity,
@@ -812,19 +893,14 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         };
       }
       return activity;
-    });
-    
-    onDataChange(newData);
+    }));
     
     setVisitTypeSelector(null);
   };
 
   // New function to handle custom text changes
   const handleActivityCellCustomTextChange = (activityId: string, dayId: string, newText: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
+    setActivities(prev => prev.map(activity => {
       if (activity.id === activityId) {
         return {
           ...activity,
@@ -837,9 +913,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         };
       }
       return activity;
-    });
-    
-    onDataChange(newData);
+    }));
   };
 
   // New function to merge selected cells
@@ -878,13 +952,10 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
     });
     
     // Find the top-left cell (main cell)
-    const mainActivityId = data.activities![minActivityIndex].id;
+    const mainActivityId = activities[minActivityIndex].id;
     const mainDayId = allDays[minDayIndex].id;
     
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map((activity, activityIndex) => {
+    setActivities(prev => prev.map((activity, activityIndex) => {
       return {
         ...activity,
         cells: activity.cells.map((cell, cellIndex) => {
@@ -919,9 +990,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           return cell;
         })
       };
-    });
-    
-    onDataChange(newData);
+    }));
     
     // Clear selection
     setSelectedActivityCells(new Set());
@@ -930,10 +999,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
 
   // New function to unmerge a cell
   const unmergeCell = (activityId: string, dayId: string) => {
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
+    setActivities(prev => prev.map(activity => {
       if (activity.id === activityId) {
         return {
           ...activity,
@@ -966,19 +1032,14 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           })
         };
       }
-    });
-    
-    onDataChange(newData);
+    }));
   };
 
   // New function to activate selected cells
   const activateSelectedCells = (visitType?: VisitType) => {
     if (selectedActivityCells.size === 0) return;
     
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
+    setActivities(prev => prev.map(activity => {
       return {
         ...activity,
         cells: activity.cells.map(cell => {
@@ -995,9 +1056,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           return cell;
         })
       };
-    });
-    
-    onDataChange(newData);
+    }));
     
     // Clear selection
     setSelectedActivityCells(new Set());
@@ -1008,10 +1067,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const clearSelectedCells = () => {
     if (selectedActivityCells.size === 0) return;
     
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
+    setActivities(prev => prev.map(activity => {
       return {
         ...activity,
         cells: activity.cells.map(cell => {
@@ -1028,9 +1084,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
           return cell;
         })
       };
-    });
-    
-    onDataChange(newData);
+    }));
     
     // Clear selection
     setSelectedActivityCells(new Set());
@@ -1053,10 +1107,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   const handleTextInputForCell = (text: string) => {
     if (!textInputState.activityId || !textInputState.dayId) return;
     
-    const newData = { ...data };
-    if (!newData.activities) newData.activities = [];
-    
-    newData.activities = newData.activities.map(activity => {
+    setActivities(prev => prev.map(activity => {
       if (activity.id === textInputState.activityId) {
         return {
           ...activity,
@@ -1073,9 +1124,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         };
       }
       return activity;
-    });
-    
-    onDataChange(newData);
+    }));
     
     setTextInputState({
       isOpen: false,
@@ -1099,7 +1148,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
   };
 
   const getActivityCell = (activityId: string, dayId: string): ActivityCell | undefined => {
-    const activity = data.activities?.find(a => a.id === activityId);
+    const activity = activities.find(a => a.id === activityId);
     return activity?.cells.find(c => c.dayId === dayId);
   };
 
@@ -1346,6 +1395,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       onDataChange(sampleData);
       
       // Reset local state
+      setActivities(sampleData.activities || []);
+      setActivityGroups(sampleData.activityGroups || []);
       setSelectedActivityCells(new Set());
       setSelectedTimeWindowCells(new Set());
       setSelectedActivityHeaders(new Set());
@@ -1362,6 +1413,8 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
       onDataChange(emptyData);
       
       // Reset local state
+      setActivities([]);
+      setActivityGroups([]);
       setSelectedActivityCells(new Set());
       setSelectedTimeWindowCells(new Set());
       setSelectedActivityHeaders(new Set());
@@ -1434,14 +1487,13 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                   
                   <ActivityRowsSection
                     data={data}
-                    activities={data.activities || []}
-                    activityGroups={data.activityGroups || []}
+                    activities={activities}
+                    activityGroups={activityGroups}
                     selectedActivityHeaders={selectedActivityHeaders}
                     collapsedGroups={collapsedGroups}
                     editingActivity={editingActivity}
                     hoveredActivityRow={hoveredActivityRow}
                     selectedActivityCells={selectedActivityCells}
-                    dragState={dragState}
                     getTotalDays={getTotalDays}
                     getActivityCell={getActivityCell}
                     getCellKey={getCellKey}
@@ -1465,11 +1517,6 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
                     onRenameGroup={renameActivityGroup}
                     onChangeGroupColor={changeActivityGroupColor}
                     onUngroupGroup={ungroupActivityGroup}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDrop={handleDropWithAnimation}
-                    setHoveredDropZone={setHoveredDropZone}
-                    validateDrop={validateDrop}
                   />
                 </tbody>
               </table>
@@ -1593,12 +1640,12 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         position={{ x: activityHeaderContextMenuState.x, y: activityHeaderContextMenuState.y }}
         selectedActivityHeaders={selectedActivityHeaders}
         clickedActivityId={activityHeaderContextMenuState.clickedActivityId}
-        activityGroups={data.activityGroups || []}
-        activities={data.activities || []}
+        activityGroups={activityGroups}
+        activities={activities}
         onGroup={groupSelectedActivityHeaders}
         onUngroup={ungroupActivityGroup}
         onRename={(groupId) => {
-          const group = data.activityGroups?.find(g => g.id === groupId);
+          const group = activityGroups.find(g => g.id === groupId);
           if (group) {
             const newName = prompt('Enter new group name:', group.name);
             if (newName && newName.trim() !== group.name) {
