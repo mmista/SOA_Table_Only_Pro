@@ -203,7 +203,7 @@ export const SOATable: React.FC<SOATableProps> = ({
     updateVisitLinks,
     unlinkAllVisits,
     cleanUpVisitLinks
-  } = useVisitLinks(displayData, onDataChange);
+  } = useVisitLinks(data, onDataChange);
 
   // Show success animation when a move completes
   const showSuccessAnimation = () => {
