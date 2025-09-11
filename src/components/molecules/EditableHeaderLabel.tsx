@@ -112,9 +112,9 @@ export const EditableHeaderLabel: React.FC<EditableHeaderLabelProps> = ({
             <button
               onClick={handleToggleHeaderVisibility}
               className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors opacity-0 group-hover:opacity-100 ml-2 flex-shrink-0"
-              title="Toggle row visibility"
+              title="Hide row"
             >
-              <Minimize2 className="w-3 h-3" />
+              <EyeOff className="w-3 h-3" />
             </button>
           </>
         )}

@@ -146,7 +146,7 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
             onClick={handleFocus}
           >
             <Focus className="w-4 h-4 text-blue-500" />
-            <span>Focus on this {headerType}</span>
+            <span>Focus on this {headerType?.toLowerCase()}</span>
           </button>
         )}
         
@@ -178,7 +178,7 @@ export const TimelineHeaderContextMenu: React.FC<TimelineHeaderContextMenuProps>
                 className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 onClick={handleUnminimize}
               >
-                <Eye className="w-4 h-4 text-green-500" />
+                <EyeIcon className="w-4 h-4 text-green-500" />
                 <span>Restore column</span>
               </button>
             )}

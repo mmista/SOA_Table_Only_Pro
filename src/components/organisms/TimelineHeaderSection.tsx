@@ -61,82 +61,6 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     headerName: ''
   });
 
-  // Filter data based on focus mode
-  const getFilteredData = React.useCallback((originalData: SOAData): SOAData => {
-    if (!headerManagement.isFocusMode || !headerManagement.focusedHeaderId || !headerManagement.focusedHeaderType) {
-      return originalData;
-    }
-
-    const focusedId = headerManagement.focusedHeaderId;
-    const focusedType = headerManagement.focusedHeaderType;
-
-    // Create a deep copy of the data
-    const filteredData: SOAData = {
-      ...originalData,
-      periods: []
-    };
-
-    // Filter based on focused header type and ID
-    for (const period of originalData.periods) {
-      if (focusedType === 'period' && period.id === focusedId) {
-        filteredData.periods.push(period);
-        break;
-      }
-      
-      const filteredPeriod: Period = { ...period, cycles: [] };
-      let shouldIncludePeriod = false;
-
-      for (const cycle of period.cycles) {
-        if (focusedType === 'cycle' && cycle.id === focusedId) {
-          filteredPeriod.cycles.push(cycle);
-          shouldIncludePeriod = true;
-          break;
-        }
-        
-        const filteredCycle: Cycle = { ...cycle, weeks: [] };
-        let shouldIncludeCycle = false;
-
-        for (const week of cycle.weeks) {
-          if (focusedType === 'week' && week.id === focusedId) {
-            filteredCycle.weeks.push(week);
-            shouldIncludeCycle = true;
-            break;
-          }
-          
-          const filteredWeek: Week = { ...week, days: [] };
-          let shouldIncludeWeek = false;
-
-          for (const day of week.days) {
-            if (focusedType === 'day' && day.id === focusedId) {
-              filteredWeek.days.push(day);
-              shouldIncludeWeek = true;
-              break;
-            }
-          }
-
-          if (shouldIncludeWeek) {
-            filteredCycle.weeks.push(filteredWeek);
-            shouldIncludeCycle = true;
-          }
-        }
-
-        if (shouldIncludeCycle) {
-          filteredPeriod.cycles.push(filteredCycle);
-          shouldIncludePeriod = true;
-        }
-      }
-
-      if (shouldIncludePeriod) {
-        filteredData.periods.push(filteredPeriod);
-      }
-    }
-
-    return filteredData;
-  }, [headerManagement.isFocusMode, headerManagement.focusedHeaderId, headerManagement.focusedHeaderType]);
-
-  // Get current data (filtered or original)
-  const currentData = React.useMemo(() => getFilteredData(data), [data, getFilteredData]);
-
   // Helper function to get header by type from centralized state
   const getHeaderByType = (type: string) => {
     return headerManagement.headers?.find(header => header.type === type);
@@ -160,10 +84,10 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
     // Find the header name
     let headerName = '';
     if (headerType === 'period') {
-      const period = currentData.periods.find(p => p.id === headerId);
+      const period = data.periods.find(p => p.id === headerId);
       headerName = period?.name || '';
     } else if (headerType === 'cycle') {
-      for (const period of currentData.periods) {
+      for (const period of data.periods) {
         const cycle = period.cycles.find(c => c.id === headerId);
         if (cycle) {
           headerName = cycle.name;
@@ -171,7 +95,7 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
         }
       }
     } else if (headerType === 'week') {
-      for (const period of currentData.periods) {
+      for (const period of data.periods) {
         for (const cycle of period.cycles) {
           const week = cycle.weeks.find(w => w.id === headerId);
           if (week) {
@@ -189,25 +113,10 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
       headerType,
       headerName
     });
-  }, [currentData]);
+  }, [data]);
 
   const handleCloseContextMenu = React.useCallback(() => {
     setContextMenu(prev => ({ ...prev, isOpen: false }));
-  }, []);
-
-  // Helper function to collect all visible day IDs from filtered data
-  const getVisibleDayIds = React.useCallback((filteredData: SOAData): string[] => {
-    const dayIds: string[] = [];
-    filteredData.periods.forEach(period => {
-      period.cycles.forEach(cycle => {
-        cycle.weeks.forEach(week => {
-          week.days.forEach(day => {
-            dayIds.push(day.id);
-          });
-        });
-      });
-    });
-    return dayIds;
   }, []);
 
   const renderDraggableCell = (
@@ -319,11 +228,11 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   isVisible={header?.isVisible || false}
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
-                  onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleHeaderVisibility={headerManagement.hideHeaderRow}
                   onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
-            })()}
+          {data.periods.map(period =>
             {currentData.periods.map(period => 
               renderDraggableCell(
                 period.name,
@@ -350,11 +259,11 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   isVisible={header?.isVisible || false}
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
-                  onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleHeaderVisibility={headerManagement.hideHeaderRow}
                   onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
-            })()}
+          {data.periods.map(period =>
             {currentData.periods.map(period =>
               period.cycles.map(cycle => 
                 renderDraggableCell(
@@ -383,11 +292,11 @@ export const TimelineHeaderSection: React.FC<TimelineHeaderSectionProps> = ({
                   isVisible={header?.isVisible || false}
                   onStartEdit={headerManagement.startEditingHeader}
                   onSaveLabel={headerManagement.saveHeaderLabel}
-                  onCancelEdit={headerManagement.cancelEditingHeader}
+                onToggleHeaderVisibility={headerManagement.hideHeaderRow}
                   onToggleHeaderVisibility={headerManagement.toggleHeaderVisibility}
                 />
               );
-            })()}
+          {data.periods.map(period =>
             {currentData.periods.map(period =>
               period.cycles.map(cycle =>
                 cycle.weeks.map(week =>
