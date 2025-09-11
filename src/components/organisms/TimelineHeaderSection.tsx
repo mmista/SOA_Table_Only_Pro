@@ -4,7 +4,7 @@ import { DraggableCell } from '../DraggableCell';
 import { EditableHeaderLabel } from '../molecules/EditableHeaderLabel';
 
 interface TimelineHeaderSectionProps {
-  data: SOAData;
+  data: SOAData; // Display data for rendering structure
   headerManagement: ReturnType<typeof import('../../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
   dragState: {
     isDragging: boolean;

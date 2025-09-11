@@ -8,7 +8,7 @@ import { ActivityGroupHeaderContextMenu } from '../ActivityGroupHeaderContextMen
 import { ColorPickerModal } from '../ColorPickerModal';
 
 interface ActivityRowsSectionProps {
-  data: SOAData;
+  data: SOAData; // Display data for rendering structure
   activities: ActivityData[];
   activityGroups: ActivityGroup[];
   selectedActivityHeaders: Set<string>;

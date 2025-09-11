@@ -23,6 +23,7 @@ import { generateSampleData, generateEmptyData } from '../utils/presetData';
 
 interface SOATableProps {
   data: SOAData;
+  displayData: SOAData;
   onDataChange: (data: SOAData) => void;
   headerManagement: ReturnType<typeof import('../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
   isFocusModeActive: boolean;
@@ -33,6 +34,7 @@ interface SOATableProps {
 
 interface HoverState {
   type: EditableItemType;
+  displayData,
   id: string;
   side: 'left' | 'right';
 }
@@ -485,7 +487,7 @@ export const SOATable: React.FC<SOATableProps> = ({
   };
 
   const getTotalDays = () => {
-    return data.periods.reduce((total, period) => {
+    return displayData.periods.reduce((total, period) => {
       return total + period.cycles.reduce((cycleTotal, cycle) => {
         return cycleTotal + cycle.weeks.reduce((weekTotal, week) => {
           return weekTotal + week.days.length;
@@ -910,7 +912,7 @@ export const SOATable: React.FC<SOATableProps> = ({
     
     // Get all days for indexing
     const allDays: Day[] = [];
-    data.periods.forEach(period => {
+    displayData.periods.forEach(period => {
       period.cycles.forEach(cycle => {
         cycle.weeks.forEach(week => {
           allDays.push(...week.days);
@@ -1415,13 +1417,13 @@ export const SOATable: React.FC<SOATableProps> = ({
   return (
     <>
       <div className="flex flex-1 bg-gray-50 w-full">
-        <div className="flex-1 p-6 overflow-y-auto">
+              data={displayData}
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             <TableHeader
               title="SOA Builder - Prototype"
               totalDays={getTotalDays()}
               commentStats={commentStats}
-              selectedCellsCount={selectedActivityCells.size}
+              data={displayData}
               selectedTimeWindowCellsCount={selectedTimeWindowCells.size}
               dragState={dragState}
               showMoveSuccess={showMoveSuccess}

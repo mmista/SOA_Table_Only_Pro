@@ -115,7 +115,8 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 pb-8">
       <SOATable
-        data={filteredSoaData}
+        data={soaData}
+        displayData={filteredSoaData}
         onDataChange={handleDataChange}
         headerManagement={headerManagement}
         isFocusModeActive={isFocusModeActive}

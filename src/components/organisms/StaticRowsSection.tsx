@@ -8,7 +8,7 @@ import { HiddenHeadersContainer } from '../molecules/HiddenHeadersContainer';
 import { TimeWindowCell } from '../molecules/TimeWindowCell';
 
 interface StaticRowsSectionProps {
-  data: SOAData;
+  data: SOAData; // Display data for rendering structure
   headerManagement: ReturnType<typeof useTimelineHeaderManagement>;
   timeRelativeCells: TimeRelativeCell[];
   timeWindowCells: TimeWindowCellInterface[];
