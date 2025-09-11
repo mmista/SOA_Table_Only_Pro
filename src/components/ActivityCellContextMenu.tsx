@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Merge, Split, CheckSquare, Square, User, Phone, Package, Monitor, X } from 'lucide-react';
+import { Merge, Split, CheckSquare, Square, User, Phone, Package, Monitor, X, Type } from 'lucide-react';
 import { VisitType } from '../types/soa';
 
 interface ActivityCellContextMenuProps {
@@ -18,6 +18,7 @@ interface ActivityCellContextMenuProps {
   onActivateSelected: (visitType?: VisitType) => void;
   onClearSelected: () => void;
   onSetVisitTypeForSingleCell: () => void;
+  onAddTextToSingleCell: () => void;
   onClose: () => void;
 }
 
@@ -44,6 +45,7 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
   onActivateSelected,
   onClearSelected,
   onSetVisitTypeForSingleCell,
+  onAddTextToSingleCell,
   onClose
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -229,6 +231,16 @@ export const ActivityCellContextMenu: React.FC<ActivityCellContextMenuProps> = (
         {isSingleCellContext && (
           <>
             <div className="border-t border-gray-100 my-1" />
+            <button
+              className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                onAddTextToSingleCell();
+                onClose();
+              }}
+            >
+              <Type className="w-4 h-4 text-indigo-500" />
+              <span>Add Text</span>
+            </button>
             <button
               className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               onClick={() => {
