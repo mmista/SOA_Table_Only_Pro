@@ -409,6 +409,9 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
         }
         return newSet;
       });
+    } else {
+      // Regular click - clear selection and select this activity
+      setSelectedActivityHeaders(new Set([activityId]));
     }
   };
 

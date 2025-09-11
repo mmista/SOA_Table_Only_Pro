@@ -6,6 +6,9 @@ interface ActivityGroupHeaderProps {
   group: ActivityGroup;
   totalColumns: number;
   isCollapsed: boolean;
+  isDragging?: boolean;
+  isValidDropTarget?: boolean;
+  dropZoneStyle?: string;
   forceShowColorPicker?: boolean;
   onToggleCollapse: (groupId: string) => void;
   onRename: (groupId: string, newName: string) => void;
@@ -13,6 +16,11 @@ interface ActivityGroupHeaderProps {
   onOpenColorPicker?: (groupId: string | null) => void;
   onUngroup: (groupId: string) => void;
   onRightClick: (e: React.MouseEvent, groupId: string) => void;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragLeave?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
 }
 
 const GROUP_COLORS = [
@@ -30,12 +38,20 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   group,
   totalColumns,
   isCollapsed,
+  isDragging = false,
+  isValidDropTarget = false,
+  dropZoneStyle = '',
   onToggleCollapse,
   onRename,
   onChangeColor,
   onOpenColorPicker,
   onUngroup,
-  onRightClick
+  onRightClick,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(group.name);
@@ -79,7 +95,20 @@ export const ActivityGroupHeader: React.FC<ActivityGroupHeaderProps> = ({
   };
 
   return (
-    <tr className="bg-gray-50 border-t-2 border-b border-gray-200">
+    <tr 
+      className={`
+        bg-gray-50 border-t-2 border-b border-gray-200 cursor-move transition-all duration-200
+        ${isDragging ? 'opacity-50 scale-95' : ''}
+        ${isValidDropTarget ? 'ring-1 ring-blue-300' : ''}
+        ${dropZoneStyle}
+      `}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <td 
         className="sticky left-0 bg-gray-50 px-4 py-3 z-[15] border-r border-gray-300"
         onContextMenu={(e) => onRightClick(e, group.id)}

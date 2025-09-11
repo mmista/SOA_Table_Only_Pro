@@ -93,7 +93,7 @@ export interface VisitTypeConfig {
 }
 
 export type EditableItem = Period | Cycle | Week | Day | TimeRelativeCell | TimeWindowCell | TimeOfDayCell;
-export type EditableItemType = 'period' | 'cycle' | 'week' | 'day' | 'time-relative-cell' | 'time-window-cell' | 'time-of-day-cell';
+export type EditableItemType = 'period' | 'cycle' | 'week' | 'day' | 'time-relative-cell' | 'time-window-cell' | 'time-of-day-cell' | 'activity' | 'activity-group';
 
 export interface EditContext {
   item: EditableItem;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
-import { SOAData, ActivityData, ActivityCell, ActivityGroup } from '../../types/soa';
+import { SOAData, ActivityData, ActivityCell, ActivityGroup, EditableItemType } from '../../types/soa';
 import { ActivityRowHeader } from '../molecules/ActivityRowHeader';
 import { ActivityCell as ActivityCellComponent } from '../ActivityCell';
 import { ActivityGroupHeader } from '../ActivityGroupHeader';
@@ -16,6 +16,12 @@ interface ActivityRowsSectionProps {
   editingActivity: string | null;
   hoveredActivityRow: string | null;
   selectedActivityCells: Set<string>;
+  dragState: {
+    isDragging: boolean;
+    draggedItem: any;
+    draggedType: EditableItemType;
+    hoveredDropZone: string | null;
+  };
   getTotalDays: () => number;
   getActivityCell: (activityId: string, dayId: string) => ActivityCell | undefined;
   getCellKey: (activityId: string, dayId: string) => string;
@@ -39,6 +45,11 @@ interface ActivityRowsSectionProps {
   onRenameGroup: (groupId: string, newName: string) => void;
   onChangeGroupColor: (groupId: string, newColor: string) => void;
   onUngroupGroup: (groupId: string) => void;
+  onDragStart: (item: any, type: EditableItemType) => void;
+  onDragEnd: () => void;
+  onDrop: (targetId: string, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => void;
+  setHoveredDropZone: (zoneId: string | null) => void;
+  validateDrop: (dragType: EditableItemType, targetType: EditableItemType, position: 'before' | 'after' | 'inside') => boolean;
 }
 
 interface ColorPickerModalState {
@@ -57,6 +68,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
   editingActivity,
   hoveredActivityRow,
   selectedActivityCells,
+  dragState,
   getTotalDays,
   getActivityCell,
   getCellKey,
@@ -79,7 +91,12 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
   onToggleGroupCollapse,
   onRenameGroup,
   onChangeGroupColor,
-  onUngroupGroup
+  onUngroupGroup,
+  onDragStart,
+  onDragEnd,
+  onDrop,
+  setHoveredDropZone,
+  validateDrop
 }) => {
   const [groupHeaderContextMenu, setGroupHeaderContextMenu] = React.useState<{
     isOpen: boolean,
@@ -98,6 +115,7 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     currentColor: '#3B82F6',
   });
 
+  const [dragOver, setDragOver] = React.useState<{ id: string; position: 'before' | 'after' } | null>(null);
   const handleGroupHeaderRightClick = (e: React.MouseEvent, groupId: string) => {
     e.preventDefault();
     setGroupHeaderContextMenu({
@@ -132,6 +150,90 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
     onChangeGroupColor(groupId, newColor);
   };
 
+  // Drag and drop handlers for activities
+  const handleActivityDragStart = (e: React.DragEvent, activity: ActivityData) => {
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart(activity, 'activity');
+  };
+
+  const handleActivityDragOver = (e: React.DragEvent, activityId: string) => {
+    e.preventDefault();
+    
+    if (!dragState.isDragging || (dragState.draggedType !== 'activity' && dragState.draggedType !== 'activity-group')) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const height = rect.height;
+    
+    const position = y < height / 2 ? 'before' : 'after';
+    setDragOver({ id: activityId, position });
+    setHoveredDropZone(`${activityId}-${position}`);
+  };
+
+  const handleActivityDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOver(null);
+      setHoveredDropZone(null);
+    }
+  };
+
+  const handleActivityDrop = (e: React.DragEvent, activityId: string) => {
+    e.preventDefault();
+    if (dragOver && dragState.isDragging) {
+      onDrop(activityId, 'activity', dragOver.position);
+    }
+    setDragOver(null);
+    setHoveredDropZone(null);
+  };
+
+  // Drag and drop handlers for activity groups
+  const handleGroupDragStart = (e: React.DragEvent, group: ActivityGroup) => {
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart(group, 'activity-group');
+  };
+
+  const handleGroupDragOver = (e: React.DragEvent, groupId: string) => {
+    e.preventDefault();
+    
+    if (!dragState.isDragging || (dragState.draggedType !== 'activity-group' && dragState.draggedType !== 'activity')) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const height = rect.height;
+    
+    const position = y < height / 2 ? 'before' : 'after';
+    setDragOver({ id: groupId, position });
+    setHoveredDropZone(`${groupId}-${position}`);
+  };
+
+  const handleGroupDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOver(null);
+      setHoveredDropZone(null);
+    }
+  };
+
+  const handleGroupDrop = (e: React.DragEvent, groupId: string) => {
+    e.preventDefault();
+    if (dragOver && dragState.isDragging) {
+      onDrop(groupId, 'activity-group', dragOver.position);
+    }
+    setDragOver(null);
+    setHoveredDropZone(null);
+  };
+
+  const getDropZoneStyle = (itemId: string) => {
+    if (!dragOver || dragOver.id !== itemId) return '';
+    
+    switch (dragOver.position) {
+      case 'before':
+        return 'border-t-4 border-t-blue-500';
+      case 'after':
+        return 'border-b-4 border-b-blue-500';
+      default:
+        return '';
+    }
+  };
   // Organize activities by groups
   const ungroupedActivities = activities.filter(activity => !activity.groupId);
   const groupedActivities = activityGroups.map(group => ({
@@ -142,11 +244,26 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
   const renderActivityRow = (activity: ActivityData) => {
     const group = activityGroups.find(g => g.id === activity.groupId);
     const isSelected = selectedActivityHeaders.has(activity.id);
+    const isDragging = dragState.isDragging && dragState.draggedItem?.id === activity.id;
+    const isValidDropTarget = dragState.isDragging && 
+      dragState.draggedItem?.id !== activity.id &&
+      (validateDrop(dragState.draggedType, 'activity', 'before') || validateDrop(dragState.draggedType, 'activity', 'after'));
     
     return (
       <tr 
         key={activity.id} 
-        className="group transition-colors duration-150"
+        className={`
+          group transition-colors duration-150 cursor-move
+          ${isDragging ? 'opacity-50 scale-95' : ''}
+          ${isValidDropTarget ? 'ring-1 ring-blue-300' : ''}
+          ${getDropZoneStyle(activity.id)}
+        `}
+        draggable
+        onDragStart={(e) => handleActivityDragStart(e, activity)}
+        onDragEnd={onDragEnd}
+        onDragOver={(e) => handleActivityDragOver(e, activity.id)}
+        onDragLeave={handleActivityDragLeave}
+        onDrop={(e) => handleActivityDrop(e, activity.id)}
         onMouseEnter={() => onActivityRowHover(activity.id)}
         onMouseLeave={() => onActivityRowHover(null)}
       >
@@ -214,12 +331,22 @@ export const ActivityRowsSection: React.FC<ActivityRowsSectionProps> = ({
             group={group}
             totalColumns={getTotalDays()}
             isCollapsed={collapsedGroups.has(group.id)}
+            isDragging={dragState.isDragging && dragState.draggedItem?.id === group.id}
+            isValidDropTarget={dragState.isDragging && 
+              dragState.draggedItem?.id !== group.id &&
+              (validateDrop(dragState.draggedType, 'activity-group', 'before') || validateDrop(dragState.draggedType, 'activity-group', 'after'))}
+            dropZoneStyle={getDropZoneStyle(group.id)}
             onToggleCollapse={onToggleGroupCollapse}
             onRename={onRenameGroup}
             onChangeColor={onChangeGroupColor}
             onOpenColorPicker={handleOpenColorPicker}
             onUngroup={onUngroupGroup}
             onRightClick={handleGroupHeaderRightClick}
+            onDragStart={(e) => handleGroupDragStart(e, group)}
+            onDragEnd={onDragEnd}
+            onDragOver={(e) => handleGroupDragOver(e, group.id)}
+            onDragLeave={handleGroupDragLeave}
+            onDrop={(e) => handleGroupDrop(e, group.id)}
           />
           {!collapsedGroups.has(group.id) && groupActivities.map(renderActivityRow)}
         </React.Fragment>
