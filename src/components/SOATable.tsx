@@ -24,7 +24,6 @@ import { generateSampleData, generateEmptyData } from '../utils/presetData';
 interface SOATableProps {
   data: SOAData;
   displayData: SOAData;
-  displayData: SOAData;
   onDataChange: (data: SOAData) => void;
   headerManagement: ReturnType<typeof import('../hooks/useTimelineHeaderManagement').useTimelineHeaderManagement>;
   isFocusModeActive: boolean;
@@ -35,8 +34,6 @@ interface SOATableProps {
 
 interface HoverState {
   type: EditableItemType;
-  displayData,
-  displayData,
   id: string;
   side: 'left' | 'right';
 }
@@ -1420,134 +1417,133 @@ export const SOATable: React.FC<SOATableProps> = ({
   return (
     <>
       <div className="flex flex-1 bg-gray-50 w-full">
-              data={displayData}
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-            <TableHeader
-              title="SOA Builder - Prototype"
-              totalDays={getTotalDays()}
-              commentStats={commentStats}
-              data={displayData}
-              selectedTimeWindowCellsCount={selectedTimeWindowCells.size}
-              dragState={dragState}
-              showMoveSuccess={showMoveSuccess}
-              canUndo={canUndo}
-              historyLength={history.length}
-              isFocusModeActive={isFocusModeActive}
-              focusedTimelineItem={focusedTimelineItem}
-              onUndo={undo}
-              onOpenHeaderSettings={() => setShowHeaderSettingsModal(true)}
-              onLoadSampleData={handleLoadSampleData}
-              onClearData={handleClearData}
-              onExitFocus={onExitFocusMode}
-            />
-            
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <TimelineHeaderSection
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <TableHeader
+            title="SOA Builder - Prototype"
+            totalDays={getTotalDays()}
+            commentStats={commentStats}
+            data={displayData}
+            selectedTimeWindowCellsCount={selectedTimeWindowCells.size}
+            dragState={dragState}
+            showMoveSuccess={showMoveSuccess}
+            canUndo={canUndo}
+            historyLength={history.length}
+            isFocusModeActive={isFocusModeActive}
+            focusedTimelineItem={focusedTimelineItem}
+            onUndo={undo}
+            onOpenHeaderSettings={() => setShowHeaderSettingsModal(true)}
+            onLoadSampleData={handleLoadSampleData}
+            onClearData={handleClearData}
+            onExitFocus={onExitFocusMode}
+          />
+          
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <TimelineHeaderSection
+                data={data}
+                headerManagement={headerManagement}
+                dragState={dragState}
+                hoveredItems={hoveredItems}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDropWithAnimation}
+                onItemHover={handleItemHover}
+                onItemClick={handleCellClick}
+                onAddItem={handleAddItem}
+                setHoveredDropZone={setHoveredDropZone}
+                validateDrop={validateDrop}
+                hasComment={hasComment}
+                onCommentClick={handleCommentClick}
+                onRightClick={handleTimelineRightClick}
+                onExitFocus={onExitFocusMode}
+                focusedTimelineItem={focusedTimelineItem}
+              />
+              
+              <tbody>
+                <StaticRowsSection
                   data={data}
                   headerManagement={headerManagement}
-                  dragState={dragState}
-                  hoveredItems={hoveredItems}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  onDrop={handleDropWithAnimation}
-                  onItemHover={handleItemHover}
-                  onItemClick={handleCellClick}
-                  onAddItem={handleAddItem}
-                  setHoveredDropZone={setHoveredDropZone}
-                  validateDrop={validateDrop}
-                  hasComment={hasComment}
-                  onCommentClick={handleCommentClick}
+                  timeRelativeCells={data.timeRelativeCells || []}
+                  timeWindowCells={data.timeWindowCells || []}
+                  timeOfDayCells={data.timeOfDayCells || []}
+                  totalColumns={getTotalDays()}
+                  isVisitLinked={isVisitLinked}
+                  getLinkedVisits={getLinkedVisits}
+                  getVisitLinkInfo={getVisitLinkInfo}
+                  shouldHighlightVisit={shouldHighlightVisit}
+                  handleVisitHover={handleVisitHover}
+                  onStaticCellClick={handleStaticCellClick}
+                  onOpenVisitLinkPanel={openVisitLinkPanel}
+                  selectedTimeWindowCells={selectedTimeWindowCells}
+                  onTimeWindowCellClick={handleTimeWindowCellClick}
+                  onTimeWindowCellRightClick={handleTimeWindowCellRightClick}
+                  onTimeWindowCellCustomTextChange={handleTimeWindowCellCustomTextChange}
                   onRightClick={handleTimelineRightClick}
                   onExitFocus={onExitFocusMode}
                   focusedTimelineItem={focusedTimelineItem}
                 />
                 
-                <tbody>
-                  <StaticRowsSection
-                    data={data}
-                    headerManagement={headerManagement}
-                    timeRelativeCells={data.timeRelativeCells || []}
-                    timeWindowCells={data.timeWindowCells || []}
-                    timeOfDayCells={data.timeOfDayCells || []}
-                    totalColumns={getTotalDays()}
-                    isVisitLinked={isVisitLinked}
-                    getLinkedVisits={getLinkedVisits}
-                    getVisitLinkInfo={getVisitLinkInfo}
-                    shouldHighlightVisit={shouldHighlightVisit}
-                    handleVisitHover={handleVisitHover}
-                    onStaticCellClick={handleStaticCellClick}
-                    onOpenVisitLinkPanel={openVisitLinkPanel}
-                    selectedTimeWindowCells={selectedTimeWindowCells}
-                    onTimeWindowCellClick={handleTimeWindowCellClick}
-                    onTimeWindowCellRightClick={handleTimeWindowCellRightClick}
-                    onTimeWindowCellCustomTextChange={handleTimeWindowCellCustomTextChange}
-                    onRightClick={handleTimelineRightClick}
-                    onExitFocus={onExitFocusMode}
-                    focusedTimelineItem={focusedTimelineItem}
-                  />
-                  
-                  <ActivityRowsSection
-                    data={data}
-                    activities={data.activities || []}
-                    activityGroups={data.activityGroups || []}
-                    selectedActivityHeaders={selectedActivityHeaders}
-                    collapsedGroups={collapsedGroups}
-                    editingActivity={editingActivity}
-                    hoveredActivityRow={hoveredActivityRow}
-                    selectedActivityCells={selectedActivityCells}
-                    dragState={dragState}
-                    getTotalDays={getTotalDays}
-                    getActivityCell={getActivityCell}
-                    getCellKey={getCellKey}
-                    isVisitLinked={isVisitLinked}
-                    shouldHighlightActivityCell={shouldHighlightActivityCell}
-                    hasComment={hasComment}
-                    onActivityEdit={handleActivityEdit}
-                    onActivitySave={handleActivitySave}
-                    onActivityCancel={handleActivityCancel}
-                    onActivityRemove={handleRemoveActivity}
-                    onActivityHeaderClick={handleActivityHeaderClick}
-                    onActivityHeaderRightClick={handleActivityHeaderRightClick}
-                    onActivityCellClick={handleActivityCellClick}
-                    onActivityCellRightClick={handleActivityCellRightClick}
-                    onActivityCellCustomTextChange={handleActivityCellCustomTextChange}
-                    onCommentClick={handleCommentClick}
-                    onActivityCellHover={handleActivityCellHover}
-                    onActivityRowHover={setHoveredActivityRow}
-                    onAddActivity={handleAddActivity}
-                    onToggleGroupCollapse={toggleGroupCollapse}
-                    onRenameGroup={renameActivityGroup}
-                    onChangeGroupColor={changeActivityGroupColor}
-                    onUngroupGroup={ungroupActivityGroup}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDrop={handleDropWithAnimation}
-                    setHoveredDropZone={setHoveredDropZone}
-                    validateDrop={validateDrop}
-                  />
-                </tbody>
-              </table>
-            </div>
+                <ActivityRowsSection
+                  data={data}
+                  activities={data.activities || []}
+                  activityGroups={data.activityGroups || []}
+                  selectedActivityHeaders={selectedActivityHeaders}
+                  collapsedGroups={collapsedGroups}
+                  editingActivity={editingActivity}
+                  hoveredActivityRow={hoveredActivityRow}
+                  selectedActivityCells={selectedActivityCells}
+                  dragState={dragState}
+                  getTotalDays={getTotalDays}
+                  getActivityCell={getActivityCell}
+                  getCellKey={getCellKey}
+                  isVisitLinked={isVisitLinked}
+                  shouldHighlightActivityCell={shouldHighlightActivityCell}
+                  hasComment={hasComment}
+                  onActivityEdit={handleActivityEdit}
+                  onActivitySave={handleActivitySave}
+                  onActivityCancel={handleActivityCancel}
+                  onActivityRemove={handleRemoveActivity}
+                  onActivityHeaderClick={handleActivityHeaderClick}
+                  onActivityHeaderRightClick={handleActivityHeaderRightClick}
+                  onActivityCellClick={handleActivityCellClick}
+                  onActivityCellRightClick={handleActivityCellRightClick}
+                  onActivityCellCustomTextChange={handleActivityCellCustomTextChange}
+                  onCommentClick={handleCommentClick}
+                  onActivityCellHover={handleActivityCellHover}
+                  onActivityRowHover={setHoveredActivityRow}
+                  onAddActivity={handleAddActivity}
+                  onToggleGroupCollapse={toggleGroupCollapse}
+                  onRenameGroup={renameActivityGroup}
+                  onChangeGroupColor={changeActivityGroupColor}
+                  onUngroupGroup={ungroupActivityGroup}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDrop={handleDropWithAnimation}
+                  setHoveredDropZone={setHoveredDropZone}
+                  validateDrop={validateDrop}
+                />
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
 
-        {editContext && (
-          <>
-            {/* Backdrop */}
-            <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
-              onClick={() => setEditContext(null)}
-            />
-            {/* Edit Panel */}
-            <EditPanel
-              context={editContext}
-              onSave={handleEditSave}
-              onDelete={handleDelete}
-              onCancel={() => setEditContext(null)}
-            />
-          </>
-        )}
+      {editContext && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setEditContext(null)}
+          />
+          {/* Edit Panel */}
+          <EditPanel
+            context={editContext}
+            onSave={handleEditSave}
+            onDelete={handleDelete}
+            onCancel={() => setEditContext(null)}
+          />
+        </>
+      )}
 
       {/* Timeline Header Context Menu */}
       <TimelineHeaderContextMenu
