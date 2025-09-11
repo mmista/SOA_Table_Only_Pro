@@ -1545,7 +1545,6 @@ export const SOATable: React.FC<SOATableProps> = ({
             />
           </>
         )}
-      </div>
 
       {/* Timeline Header Context Menu */}
       <TimelineHeaderContextMenu
