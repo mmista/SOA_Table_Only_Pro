@@ -94,7 +94,7 @@ export const TimelineHeaders: React.FC<TimelineHeadersProps> = ({
     <thead>
       {/* Period Row */}
       <tr>
-        <th className="sticky left-0 z-[15] bg-white border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 min-w-[200px]">
+        <th className="sticky left-0 z-[15] bg-white border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 min-w-[200px] max-w-[33vw]">
           ACTIVITY DESCRIPTION
         </th>
         {data.periods.map((period) => (

@@ -52,7 +52,7 @@ export const ActivityRowHeader: React.FC<ActivityRowHeaderProps> = ({
 
   return (
     <td 
-      className={`sticky left-0 px-6 py-4 border-r border-gray-300 z-[15] border-b border-gray-300 transition-colors duration-150 cursor-pointer select-none relative ${getBackgroundStyle()}`}
+      className={`sticky left-0 px-6 py-4 border-r border-gray-300 z-[15] border-b border-gray-300 transition-colors duration-150 cursor-pointer select-none relative min-w-[200px] max-w-[33vw] ${getBackgroundStyle()}`}
       onClick={onClick}
       onContextMenu={onRightClick}
     >
