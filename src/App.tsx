@@ -2,7 +2,7 @@ import React from 'react';
 import { SOATable } from './components/SOATable';
 import { SOALegend } from './components/SOALegend';
 import { useTimelineHeaderManagement } from './hooks/useTimelineHeaderManagement';
-import { generateSampleData, generateEmptyData } from './utils/presetData';
+import { generateSampleData } from './utils/presetData';
 import { SOAData } from './types/soa';
 
 function App() {
@@ -13,16 +13,11 @@ function App() {
     setSoaData(newData);
   };
 
-  const handleClearData = () => {
-    setSoaData(generateEmptyData());
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 pb-8">
       <SOATable
         data={soaData}
         onDataChange={handleDataChange}
-        onClearData={handleClearData}
         headerManagement={headerManagement}
       />
       

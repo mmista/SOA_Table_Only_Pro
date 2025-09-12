@@ -22,7 +22,7 @@ export const EditableHeaderLabel: React.FC<EditableHeaderLabelProps> = ({
   onSaveLabel,
   onCancelEdit,
   onToggleVisibility,
-  className = "sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15] max-w-[33vw]"
+  className = "sticky left-0 border border-gray-300 bg-gray-50 px-4 py-2 font-normal text-xs text-gray-500 uppercase tracking-wider z-[15]"
 }) => {
   const [editValue, setEditValue] = useState(label);
   const inputRef = useRef<HTMLInputElement>(null);
