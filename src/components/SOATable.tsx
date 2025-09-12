@@ -1393,7 +1393,7 @@ export const SOATable: React.FC<SOATableProps> = ({ data, onDataChange, headerMa
             />
             
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse table-fixed">
                 <TimelineHeaderSection
                   data={data}
                   headerManagement={headerManagement}
