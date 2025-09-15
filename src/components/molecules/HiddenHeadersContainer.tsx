@@ -88,21 +88,7 @@ export const HiddenHeadersContainer: React.FC<HiddenHeadersContainerProps> = ({
         className="bg-gray-100 border-l border-gray-300" 
         colSpan={totalColumns}
       >
-        {!isExpanded && (
-          <div className="flex items-center justify-center py-2">
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
-              <div className="flex space-x-1">
-                {hiddenHeaders.slice(0, 3).map((_, index) => (
-                  <div key={index} className="w-2 h-2 bg-gray-400 rounded-full" />
-                ))}
-                {hiddenHeaders.length > 3 && (
-                  <span className="text-gray-400">+{hiddenHeaders.length - 3}</span>
-                )}
-              </div>
-              <span>Click to expand</span>
-            </div>
-          </div>
-        )}
+        {/* Empty space when collapsed */}
       </td>
     </tr>
   );
